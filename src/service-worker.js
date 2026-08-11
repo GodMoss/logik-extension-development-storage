@@ -97,6 +97,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     return true;
   }
+
+  if (request.action === 'restoreVersion') {
+    console.log('[Service Worker] restoreVersion requested for:', request.filename);
+    restoreVersion(request.blueprintName, request.filename)
+      .then((result) => {
+        console.log('[Service Worker] restoreVersion succeeded');
+        sendResponse({ success: true, result });
+      })
+      .catch((error) => {
+        console.error('[Service Worker] restoreVersion error:', error);
+        sendResponse({ error: error.message });
+      });
+
+    return true;
+  }
 });
 
 async function pushVersion(blueprintZipData) {
@@ -732,5 +747,84 @@ async function bulkDownload(blueprintNames) {
     return blueprintData;
   } catch (error) {
     throw new Error(`Bulk download failed: ${error.message}`);
+  }
+}
+
+async function restoreVersion(blueprintName, filename) {
+  try {
+    console.log('[restoreVersion] Restoring version:', filename);
+
+    // Ensure credentials are loaded
+    await ensureCredentials();
+
+    // Download the ZIP from GitHub
+    const filepath = `${blueprintName}/${filename}`;
+    console.log('[restoreVersion] Downloading from GitHub:', filepath);
+
+    const downloadResponse = await fetch(
+      `https://api.github.com/repos/${CONFIG.GITHUB_USERNAME}/${CONFIG.REPO_NAME}/contents/${filepath}`,
+      {
+        headers: {
+          Authorization: `token ${CONFIG.GITHUB_TOKEN}`,
+          Accept: 'application/vnd.github.v3.raw',
+        },
+      }
+    );
+
+    if (!downloadResponse.ok) {
+      const errorText = await downloadResponse.text();
+      console.error('[restoreVersion] Failed to download from GitHub:', downloadResponse.status, errorText);
+      throw new Error(`Failed to download version from GitHub: ${downloadResponse.status}`);
+    }
+
+    const zipBlob = await downloadResponse.blob();
+    console.log('[restoreVersion] Downloaded ZIP, size:', zipBlob.size);
+
+    // Get the Logik API key from storage
+    const data = await new Promise((resolve) => {
+      chrome.storage.local.get('profiles', (result) => {
+        resolve(result);
+      });
+    });
+
+    const profiles = data.profiles || [];
+    if (profiles.length === 0) {
+      throw new Error('No Logik API profiles configured. Please configure in extension settings.');
+    }
+
+    // For now, use the first profile (in the future, detect based on URL)
+    const profile = profiles[0];
+    const apiKey = profile.apiKey;
+    const environment = profile.environment;
+
+    // Upload to Logik API
+    const logikUrl = `https://${environment}.test.logik.io/api/admin/v2/uploadFile`;
+    console.log('[restoreVersion] Uploading to Logik:', logikUrl);
+
+    const formData = new FormData();
+    formData.append('jobType', 'GENERIC_IMPORT');
+    formData.append('file', zipBlob, filename);
+
+    const uploadResponse = await fetch(logikUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Accept': 'application/json',
+      },
+      body: formData,
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error('[restoreVersion] Failed to upload to Logik:', uploadResponse.status, errorText);
+      throw new Error(`Failed to upload to Logik: ${uploadResponse.status}`);
+    }
+
+    const result = await uploadResponse.json();
+    console.log('[restoreVersion] Upload successful:', result);
+
+    return { success: true, message: `Version ${filename} restored successfully` };
+  } catch (error) {
+    throw new Error(`Restore failed: ${error.message}`);
   }
 }
