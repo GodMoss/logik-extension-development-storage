@@ -1222,12 +1222,32 @@ function getStyles() {
     .logik-vc-panel.logik-vc-configurator-theme .logik-vc-tab-btn,
     .logik-vc-panel.logik-vc-configurator-theme .logik-vc-subtab-btn {
       color: #666 !important;
+      border-bottom-color: rgba(124, 58, 237, 0.2) !important;
     }
 
     .logik-vc-panel.logik-vc-configurator-theme .logik-vc-tab-btn.logik-vc-tab-active,
     .logik-vc-panel.logik-vc-configurator-theme .logik-vc-subtab-btn.logik-vc-subtab-active {
       color: #3b82f6 !important;
       border-bottom-color: #3b82f6 !important;
+    }
+
+    .logik-vc-panel.logik-vc-configurator-theme input,
+    .logik-vc-panel.logik-vc-configurator-theme textarea {
+      background: rgba(255, 255, 255, 0.9) !important;
+      color: #333 !important;
+      border-color: rgba(124, 58, 237, 0.3) !important;
+    }
+
+    .logik-vc-panel.logik-vc-configurator-theme input:focus,
+    .logik-vc-panel.logik-vc-configurator-theme textarea:focus {
+      border-color: #3b82f6 !important;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    }
+
+    .logik-vc-panel.logik-vc-configurator-theme table thead th {
+      color: #3b82f6 !important;
+      border-bottom-color: rgba(124, 58, 237, 0.3) !important;
+      background: rgba(237, 229, 255, 0.5) !important;
     }
 
     .logik-vc-panel.logik-vc-configurator-theme .logik-vc-button {
@@ -1240,12 +1260,25 @@ function getStyles() {
     }
 
     .logik-vc-panel.logik-vc-configurator-theme table tbody tr {
-      background: rgba(224, 215, 255, 0.5) !important;
-      border-bottom-color: rgba(99, 102, 241, 0.15) !important;
+      background: rgba(237, 229, 255, 0.5) !important;
+      border-bottom-color: rgba(124, 58, 237, 0.15) !important;
+      color: #333 !important;
     }
 
     .logik-vc-panel.logik-vc-configurator-theme table tbody tr:hover {
-      background: rgba(196, 181, 253, 0.6) !important;
+      background: rgba(220, 204, 255, 0.6) !important;
+    }
+
+    .logik-vc-panel.logik-vc-configurator-theme .logik-vc-grid-name,
+    .logik-vc-panel.logik-vc-configurator-theme .logik-vc-grid-variable,
+    .logik-vc-panel.logik-vc-configurator-theme .logik-vc-grid-description {
+      color: #333 !important;
+    }
+
+    .logik-vc-panel.logik-vc-configurator-theme .logik-vc-rules-category-header {
+      background: rgba(220, 204, 255, 0.5) !important;
+      border-bottom-color: rgba(124, 58, 237, 0.3) !important;
+      color: #3b82f6 !important;
     }
 
     /* Transaction Theme - Mint Background with Green Accents */
@@ -1259,7 +1292,7 @@ function getStyles() {
     .logik-vc-panel.logik-vc-transaction-theme .logik-vc-close,
     .logik-vc-panel.logik-vc-transaction-theme .logik-vc-collapse-arrow {
       color: #10b981 !important;
-      border-color: rgba(16, 185, 129, 0.5) !important;
+      border-color: rgba(16, 185, 129, 0.4) !important;
     }
 
     .logik-vc-panel.logik-vc-transaction-theme h2 {
@@ -1270,13 +1303,33 @@ function getStyles() {
 
     .logik-vc-panel.logik-vc-transaction-theme .logik-vc-tab-btn,
     .logik-vc-panel.logik-vc-transaction-theme .logik-vc-subtab-btn {
-      color: #666 !important;
+      color: #333 !important;
+      border-bottom-color: rgba(16, 185, 129, 0.2) !important;
     }
 
     .logik-vc-panel.logik-vc-transaction-theme .logik-vc-tab-btn.logik-vc-tab-active,
     .logik-vc-panel.logik-vc-transaction-theme .logik-vc-subtab-btn.logik-vc-subtab-active {
       color: #10b981 !important;
       border-bottom-color: #10b981 !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme input,
+    .logik-vc-panel.logik-vc-transaction-theme textarea {
+      background: rgba(255, 255, 255, 0.9) !important;
+      color: #333 !important;
+      border-color: rgba(16, 185, 129, 0.3) !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme input:focus,
+    .logik-vc-panel.logik-vc-transaction-theme textarea:focus {
+      border-color: #10b981 !important;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme table thead th {
+      color: #10b981 !important;
+      border-bottom-color: rgba(16, 185, 129, 0.3) !important;
+      background: rgba(204, 250, 225, 0.4) !important;
     }
 
     .logik-vc-panel.logik-vc-transaction-theme .logik-vc-button {
@@ -1291,10 +1344,23 @@ function getStyles() {
     .logik-vc-panel.logik-vc-transaction-theme table tbody tr {
       background: rgba(204, 250, 225, 0.5) !important;
       border-bottom-color: rgba(16, 185, 129, 0.15) !important;
+      color: #333 !important;
     }
 
     .logik-vc-panel.logik-vc-transaction-theme table tbody tr:hover {
       background: rgba(167, 243, 208, 0.6) !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-grid-name,
+    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-grid-variable,
+    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-grid-description {
+      color: #333 !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-rules-category-header {
+      background: rgba(167, 243, 208, 0.4) !important;
+      border-bottom-color: rgba(16, 185, 129, 0.3) !important;
+      color: #10b981 !important;
     }
 
     /* Tables Theme - Pink Background with Red Accents */
@@ -1308,42 +1374,75 @@ function getStyles() {
     .logik-vc-panel.logik-vc-tables-theme .logik-vc-close,
     .logik-vc-panel.logik-vc-tables-theme .logik-vc-collapse-arrow {
       color: #dc2626 !important;
-      border-color: rgba(220, 38, 38, 0.5) !important;
+      border-color: rgba(255, 107, 107, 0.5) !important;
     }
 
     .logik-vc-panel.logik-vc-tables-theme h2 {
-      background: linear-gradient(135deg, #ec4899 0%, #dc2626 100%) !important;
+      background: linear-gradient(135deg, #d63031 0%, #e84393 100%) !important;
       -webkit-background-clip: text !important;
       -webkit-text-fill-color: transparent !important;
     }
 
     .logik-vc-panel.logik-vc-tables-theme .logik-vc-tab-btn,
     .logik-vc-panel.logik-vc-tables-theme .logik-vc-subtab-btn {
-      color: #666 !important;
+      color: #333 !important;
+      border-bottom-color: rgba(214, 48, 49, 0.2) !important;
     }
 
     .logik-vc-panel.logik-vc-tables-theme .logik-vc-tab-btn.logik-vc-tab-active,
     .logik-vc-panel.logik-vc-tables-theme .logik-vc-subtab-btn.logik-vc-subtab-active {
-      color: #dc2626 !important;
-      border-bottom-color: #dc2626 !important;
+      color: #d63031 !important;
+      border-bottom-color: #d63031 !important;
+    }
+
+    .logik-vc-panel.logik-vc-tables-theme input,
+    .logik-vc-panel.logik-vc-tables-theme textarea {
+      background: rgba(255, 255, 255, 0.9) !important;
+      color: #333 !important;
+      border-color: rgba(214, 48, 49, 0.3) !important;
+    }
+
+    .logik-vc-panel.logik-vc-tables-theme input:focus,
+    .logik-vc-panel.logik-vc-tables-theme textarea:focus {
+      border-color: #d63031 !important;
+      box-shadow: 0 0 0 3px rgba(214, 48, 49, 0.1) !important;
+    }
+
+    .logik-vc-panel.logik-vc-tables-theme table thead th {
+      color: #d63031 !important;
+      border-bottom-color: rgba(214, 48, 49, 0.3) !important;
+      background: rgba(255, 245, 245, 0.5) !important;
     }
 
     .logik-vc-panel.logik-vc-tables-theme .logik-vc-button {
-      background: linear-gradient(135deg, #ec4899 0%, #dc2626 100%) !important;
+      background: linear-gradient(135deg, #d63031 0%, #e84393 100%) !important;
       color: #fff !important;
     }
 
     .logik-vc-panel.logik-vc-tables-theme .logik-vc-button:hover {
-      background: linear-gradient(135deg, #db2777 0%, #b91c1c 100%) !important;
+      background: linear-gradient(135deg, #c41e1e 0%, #d63384 100%) !important;
     }
 
     .logik-vc-panel.logik-vc-tables-theme table tbody tr {
-      background: rgba(254, 226, 226, 0.6) !important;
-      border-bottom-color: rgba(220, 38, 38, 0.15) !important;
+      background: rgba(255, 245, 245, 0.7) !important;
+      border-bottom-color: rgba(214, 48, 49, 0.15) !important;
+      color: #333 !important;
     }
 
     .logik-vc-panel.logik-vc-tables-theme table tbody tr:hover {
-      background: rgba(254, 205, 211, 0.7) !important;
+      background: rgba(254, 225, 225, 0.8) !important;
+    }
+
+    .logik-vc-panel.logik-vc-tables-theme .logik-vc-grid-name,
+    .logik-vc-panel.logik-vc-tables-theme .logik-vc-grid-variable,
+    .logik-vc-panel.logik-vc-tables-theme .logik-vc-grid-description {
+      color: #333 !important;
+    }
+
+    .logik-vc-panel.logik-vc-tables-theme .logik-vc-rules-category-header {
+      background: rgba(255, 240, 240, 0.6) !important;
+      border-bottom-color: rgba(214, 48, 49, 0.3) !important;
+      color: #d63031 !important;
     }
   `;
 }
