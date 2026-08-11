@@ -2495,15 +2495,17 @@ function showDeleteConfirmation(filename) {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     `;
 
+    // Get current theme for colors
+    const theme = getCurrentTheme();
+    const primaryColor = theme.colors.primary;
+    const primaryLight = theme.colors.primaryLight;
+
     content.innerHTML = `
       <h2 style="
         margin: 0 0 16px 0;
         font-size: 20px;
         font-weight: 700;
-        background: linear-gradient(135deg, #d63031 0%, #e84393 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        color: ${primaryColor};
       ">⚔️ Seppuku Protocol</h2>
 
       <p style="
@@ -2511,15 +2513,15 @@ function showDeleteConfirmation(filename) {
         font-size: 14px;
         color: rgba(102, 102, 102, 0.9);
         line-height: 1.6;
-      ">You are about to commit Seppuku. Do you wish to give <strong style="color: #d63031;">${filename}</strong> an honorable death?</p>
+      ">You are about to commit Seppuku. Do you wish to give <strong style="color: ${primaryColor};">${filename}</strong> an honorable death?</p>
 
       <div style="display: flex; gap: 12px;">
         <button id="seppuku-cancel" style="
           flex: 1;
           padding: 10px 16px;
-          background: rgba(255, 107, 107, 0.1);
-          color: #d63031;
-          border: 2px solid rgba(255, 107, 107, 0.3);
+          background: rgba(255, 255, 255, 0.8);
+          color: ${primaryColor};
+          border: 2px solid ${primaryColor};
           border-radius: 8px;
           cursor: pointer;
           font-size: 14px;
@@ -2530,7 +2532,7 @@ function showDeleteConfirmation(filename) {
         <button id="seppuku-confirm" style="
           flex: 1;
           padding: 10px 16px;
-          background: linear-gradient(135deg, #d63031 0%, #e84393 100%);
+          background: linear-gradient(135deg, ${primaryColor} 0%, ${primaryLight} 100%);
           color: white;
           border: none;
           border-radius: 8px;
@@ -2538,7 +2540,7 @@ function showDeleteConfirmation(filename) {
           font-size: 14px;
           font-weight: 600;
           transition: all 0.2s ease;
-          box-shadow: 0 4px 15px rgba(255, 107, 107, 0.2);
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
         ">Honorable Death</button>
       </div>
     `;
