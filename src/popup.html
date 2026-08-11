@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Logik Blueprint VC</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      width: 500px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+    .container {
+      padding: 16px;
+    }
+    h1 {
+      font-size: 16px;
+      margin-bottom: 16px;
+      color: #222;
+    }
+    .section {
+      background: white;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .button {
+      display: inline-block;
+      padding: 8px 16px;
+      background: #0052cc;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .button:hover {
+      background: #003399;
+    }
+    .button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .status {
+      font-size: 12px;
+      color: #666;
+      margin-top: 8px;
+    }
+    .version-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .version-item {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+      font-size: 12px;
+    }
+    .version-item:last-child {
+      border-bottom: none;
+    }
+    .version-date {
+      font-weight: 500;
+      color: #222;
+    }
+    .version-hash {
+      color: #666;
+      font-family: monospace;
+      font-size: 11px;
+    }
+    .error {
+      color: #d32f2f;
+      font-size: 12px;
+      padding: 8px;
+      background: #ffebee;
+      border-radius: 4px;
+      margin-top: 8px;
+    }
+    .loading {
+      color: #666;
+      font-size: 12px;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Blueprint Versions</h1>
+
+    <div class="section">
+      <button class="button" id="pushButton">Push New Version</button>
+      <div class="status" id="status"></div>
+      <div id="error"></div>
+    </div>
+
+    <div class="section">
+      <h3 style="font-size: 13px; margin-bottom: 8px;">Version History</h3>
+      <div id="versionList" class="version-list">
+        <div class="loading">Loading versions...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

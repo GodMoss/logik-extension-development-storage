@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Logik Blueprint Version Control",
+  "version": "0.1.0",
+  "description": "Store Logik blueprint versions in GitHub and view version history",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://api.github.com/*"
+  ],
+  "background": {
+    "service_worker": "src/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.logik.io/*"
+      ],
+      "js": ["src/content.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/icon.webp", "src/icon.jpg", "src/icon-testframe.png", "lib/jszip.min.js"],
+      "matches": ["https://*.logik.io/*"]
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_title": "Logik Blueprint VC"
+  },
+  "options_page": "src/options.html"
+}
