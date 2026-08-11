@@ -1176,6 +1176,23 @@ function getStyles() {
     .logik-vc-panel.logik-vc-transaction-theme .logik-vc-status {
       color: #ff8c00 !important;
     }
+
+    .logik-vc-panel.logik-vc-transaction-theme table {
+      background: rgba(30, 30, 30, 0.8) !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme table tbody tr {
+      background: rgba(40, 40, 40, 0.6) !important;
+      border-bottom-color: rgba(255, 140, 0, 0.15) !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme table tbody tr:hover {
+      background: rgba(50, 50, 50, 0.8) !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme table thead {
+      background: rgba(30, 30, 30, 0.9) !important;
+    }
   `;
 }
 
