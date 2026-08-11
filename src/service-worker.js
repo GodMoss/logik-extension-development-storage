@@ -820,9 +820,49 @@ async function restoreVersion(blueprintName, filename) {
       throw new Error(`Failed to upload to Logik: ${uploadResponse.status}`);
     }
 
-    const result = await uploadResponse.json();
-    console.log('[restoreVersion] Upload successful:', result);
+    const uploadResult = await uploadResponse.json();
+    console.log('[restoreVersion] Upload response:', uploadResult);
 
+    const jobId = uploadResult.id;
+    if (!jobId) {
+      throw new Error('No job ID returned from upload');
+    }
+
+    // Poll job status until complete
+    const jobUrl = `https://${environment}.test.logik.io/api/admin/v1/job/${jobId}`;
+    console.log('[restoreVersion] Polling job status:', jobUrl);
+
+    let jobStatus = 'STARTED';
+    let pollCount = 0;
+    const maxPolls = 120; // Max 2 minutes (120 * 1 second)
+
+    while (jobStatus !== 'COMPLETE' && pollCount < maxPolls) {
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second
+
+      const statusResponse = await fetch(jobUrl, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!statusResponse.ok) {
+        const errorText = await statusResponse.text();
+        console.error('[restoreVersion] Failed to check job status:', statusResponse.status, errorText);
+        throw new Error(`Failed to check job status: ${statusResponse.status}`);
+      }
+
+      const statusData = await statusResponse.json();
+      jobStatus = statusData.status;
+      console.log(`[restoreVersion] Job status (poll ${pollCount + 1}):`, jobStatus);
+      pollCount++;
+    }
+
+    if (jobStatus !== 'COMPLETE') {
+      throw new Error(`Job did not complete within timeout. Final status: ${jobStatus}`);
+    }
+
+    console.log('[restoreVersion] Restore job completed successfully');
     return { success: true, message: `Version ${filename} restored successfully` };
   } catch (error) {
     throw new Error(`Restore failed: ${error.message}`);
