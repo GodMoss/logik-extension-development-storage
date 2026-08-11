@@ -798,7 +798,7 @@ async function restoreVersion(blueprintName, filename) {
     const environment = profile.environment;
 
     // Upload to Logik API
-    const logikUrl = `https://${environment}.test.logik.io/api/admin/v2/uploadFile`;
+    const logikUrl = `https://${environment}.test.logik.io/a/admin/v2/uploadFile`;
     console.log('[restoreVersion] Uploading to Logik:', logikUrl);
 
     // Construct multipart/form-data manually (service workers don't have FormData)
