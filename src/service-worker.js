@@ -825,10 +825,9 @@ async function restoreVersion(blueprintName, filename) {
     const uploadResponse = await fetch(logikUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Accept': 'application/json',
         'Content-Type': `multipart/form-data; boundary=${boundary}`,
       },
+      credentials: 'include',
       body: finalBody,
     });
 
