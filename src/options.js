@@ -1,10 +1,14 @@
-// Load saved settings when page opens
+// State for profile editing
+let editingProfileIndex = null;
+
 document.addEventListener('DOMContentLoaded', loadSettings);
-
-// Save settings when user clicks Save
-document.getElementById('saveBtn').addEventListener('click', saveSettings);
-
-// Clear all settings when user clicks Clear
+document.getElementById('addProfileBtn').addEventListener('click', toggleProfileForm);
+document.getElementById('cancelProfileBtn').addEventListener('click', () => {
+  resetProfileForm();
+  toggleProfileForm();
+});
+document.getElementById('saveProfileBtn').addEventListener('click', saveProfile);
+document.getElementById('saveGithubBtn').addEventListener('click', saveGithubSettings);
 document.getElementById('clearBtn').addEventListener('click', clearSettings);
 
 // Help modal functionality
@@ -16,7 +20,6 @@ document.getElementById('closeHelpBtn').addEventListener('click', () => {
   document.getElementById('helpModal').classList.remove('open');
 });
 
-// Close modal when clicking outside
 document.getElementById('helpModal').addEventListener('click', (e) => {
   if (e.target.id === 'helpModal') {
     document.getElementById('helpModal').classList.remove('open');
@@ -27,21 +30,13 @@ async function loadSettings() {
   console.log('[Options] Loading saved settings...');
 
   const data = await chrome.storage.local.get([
-    'logikApiKey',
-    'logikApiKeySandbox',
+    'profiles',
     'githubToken',
     'githubUsername',
     'githubRepo'
   ]);
 
-  if (data.logikApiKey) {
-    document.getElementById('logikApiKey').value = data.logikApiKey;
-  }
-
-  if (data.logikApiKeySandbox) {
-    document.getElementById('logikApiKeySandbox').value = data.logikApiKeySandbox;
-  }
-
+  // Load GitHub settings
   if (data.githubToken) {
     document.getElementById('githubToken').value = data.githubToken;
   }
@@ -54,70 +49,168 @@ async function loadSettings() {
     document.getElementById('githubRepo').value = data.githubRepo;
   }
 
+  // Load profiles
+  const profiles = data.profiles || [];
+  renderProfiles(profiles);
+
   console.log('[Options] Settings loaded');
 }
 
-async function saveSettings() {
-  const logikApiKey = document.getElementById('logikApiKey').value.trim();
-  const logikApiKeySandbox = document.getElementById('logikApiKeySandbox').value.trim();
+function renderProfiles(profiles) {
+  const profilesList = document.getElementById('profilesList');
+
+  if (!profiles || profiles.length === 0) {
+    profilesList.innerHTML = `
+      <div class="empty-state">
+        <p>No profiles yet. Click "Add New Profile" to get started.</p>
+      </div>
+    `;
+    return;
+  }
+
+  profilesList.innerHTML = profiles
+    .map(
+      (profile, index) => `
+    <div class="profile-card">
+      <div class="profile-info">
+        <div class="profile-name">${escapeHtml(profile.name)}</div>
+        <div class="profile-env">Environment: ${escapeHtml(profile.environment)}</div>
+      </div>
+      <div class="profile-actions">
+        <button class="btn-edit" onclick="editProfile(${index})">Edit</button>
+        <button class="btn-delete" onclick="deleteProfile(${index})">Delete</button>
+      </div>
+    </div>
+  `
+    )
+    .join('');
+}
+
+function toggleProfileForm() {
+  document.getElementById('profileForm').classList.toggle('open');
+}
+
+function resetProfileForm() {
+  document.getElementById('profileName').value = '';
+  document.getElementById('profileEnv').value = '';
+  document.getElementById('profileApiKey').value = '';
+  document.getElementById('profileFormStatus').classList.remove('success', 'error');
+  document.getElementById('profileFormStatus').textContent = '';
+  editingProfileIndex = null;
+}
+
+async function editProfile(index) {
+  const data = await chrome.storage.local.get('profiles');
+  const profiles = data.profiles || [];
+  const profile = profiles[index];
+
+  document.getElementById('profileName').value = profile.name;
+  document.getElementById('profileEnv').value = profile.environment;
+  document.getElementById('profileApiKey').value = profile.apiKey;
+  editingProfileIndex = index;
+
+  document.getElementById('profileForm').classList.add('open');
+  document.getElementById('profileName').focus();
+}
+
+async function deleteProfile(index) {
+  if (!confirm('Are you sure you want to delete this profile?')) return;
+
+  const data = await chrome.storage.local.get('profiles');
+  const profiles = data.profiles || [];
+
+  profiles.splice(index, 1);
+  await chrome.storage.local.set({ profiles });
+
+  console.log('[Options] Profile deleted');
+  renderProfiles(profiles);
+}
+
+async function saveProfile() {
+  const name = document.getElementById('profileName').value.trim();
+  const environment = document.getElementById('profileEnv').value.trim();
+  const apiKey = document.getElementById('profileApiKey').value.trim();
+
+  // Validation
+  if (!name) {
+    showStatus('profileFormStatus', 'Client/Profile name is required', 'error');
+    return;
+  }
+
+  if (!environment) {
+    showStatus('profileFormStatus', 'Environment identifier is required', 'error');
+    return;
+  }
+
+  if (!apiKey) {
+    showStatus('profileFormStatus', 'API Key is required', 'error');
+    return;
+  }
+
+  const data = await chrome.storage.local.get('profiles');
+  let profiles = data.profiles || [];
+
+  if (editingProfileIndex !== null) {
+    profiles[editingProfileIndex] = { name, environment, apiKey };
+    console.log('[Options] Profile updated');
+  } else {
+    profiles.push({ name, environment, apiKey });
+    console.log('[Options] Profile added');
+  }
+
+  await chrome.storage.local.set({ profiles });
+
+  showStatus('profileFormStatus', '✓ Profile saved successfully', 'success');
+  setTimeout(() => {
+    resetProfileForm();
+    toggleProfileForm();
+    renderProfiles(profiles);
+  }, 800);
+}
+
+async function saveGithubSettings() {
   const githubToken = document.getElementById('githubToken').value.trim();
   const githubUsername = document.getElementById('githubUsername').value.trim();
   const githubRepo = document.getElementById('githubRepo').value.trim();
 
   // Validation
-  if (!logikApiKey && !logikApiKeySandbox) {
-    showStatus('logikStatus', 'At least one Logik API Key is required', 'error');
-    return;
-  }
-
   if (!githubToken || !githubUsername || !githubRepo) {
     showStatus('githubStatus', 'All GitHub fields are required', 'error');
     return;
   }
 
-  // Save to storage
-  const toSave = {
+  await chrome.storage.local.set({
     githubToken,
     githubUsername,
     githubRepo
-  };
+  });
 
-  if (logikApiKey) toSave.logikApiKey = logikApiKey;
-  if (logikApiKeySandbox) toSave.logikApiKeySandbox = logikApiKeySandbox;
-
-  await chrome.storage.local.set(toSave);
-
-  console.log('[Options] Settings saved to storage');
-  showStatus('logikStatus', '✓ Logik API Keys saved', 'success');
+  console.log('[Options] GitHub settings saved to storage');
   showStatus('githubStatus', '✓ GitHub settings saved', 'success');
 
-  // Clear status messages after 3 seconds
   setTimeout(() => {
-    document.getElementById('logikStatus').classList.remove('success', 'error');
     document.getElementById('githubStatus').classList.remove('success', 'error');
   }, 3000);
 }
 
 async function clearSettings() {
-  const confirmed = confirm('Are you sure? This will remove all saved credentials.');
+  const confirmed = confirm('Are you sure? This will remove all saved profiles and GitHub credentials.');
   if (!confirmed) return;
 
   await chrome.storage.local.remove([
-    'logikApiKey',
-    'logikApiKeySandbox',
+    'profiles',
     'githubToken',
     'githubUsername',
     'githubRepo'
   ]);
 
-  document.getElementById('logikApiKey').value = '';
-  document.getElementById('logikApiKeySandbox').value = '';
   document.getElementById('githubToken').value = '';
   document.getElementById('githubUsername').value = '';
   document.getElementById('githubRepo').value = '';
 
   console.log('[Options] All settings cleared');
-  showStatus('logikStatus', '✓ All settings cleared', 'success');
+  showStatus('githubStatus', '✓ All settings cleared', 'success');
+  renderProfiles([]);
 }
 
 function showStatus(elementId, message, type) {
@@ -125,4 +218,10 @@ function showStatus(elementId, message, type) {
   element.textContent = message;
   element.classList.remove('success', 'error');
   element.classList.add(type);
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }

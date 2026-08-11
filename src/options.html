@@ -181,6 +181,98 @@
     .help-modal-close:hover {
       color: #333;
     }
+    .profiles-list {
+      margin-bottom: 20px;
+    }
+    .profile-card {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .profile-info {
+      flex: 1;
+    }
+    .profile-name {
+      font-weight: 600;
+      color: #222;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+    .profile-env {
+      font-size: 13px;
+      color: #666;
+    }
+    .profile-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .profile-actions button {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+    .btn-edit {
+      background: #0052cc;
+    }
+    .btn-delete {
+      background: #d32f2f;
+    }
+    .btn-add {
+      background: #28a745;
+      margin-bottom: 20px;
+    }
+    .btn-edit:hover {
+      background: #003399;
+    }
+    .btn-delete:hover {
+      background: #b71c1c;
+    }
+    .btn-add:hover {
+      background: #218838;
+    }
+    .profile-form {
+      background: #f0f6ff;
+      border: 1px solid #0052cc;
+      border-radius: 6px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .profile-form.open {
+      display: block;
+    }
+    .form-row {
+      margin-bottom: 16px;
+    }
+    .form-row label {
+      margin-bottom: 6px;
+    }
+    .form-buttons {
+      display: flex;
+      gap: 8px;
+    }
+    .form-buttons button {
+      flex: 1;
+    }
+    .btn-cancel {
+      background: #999;
+    }
+    .btn-cancel:hover {
+      background: #666;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+    }
+    .empty-state p {
+      margin: 0;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -244,19 +336,43 @@
     </div>
 
     <div class="section">
-      <h2>Logik Admin API Keys</h2>
+      <h2>Logik Admin API Profiles</h2>
       <p class="help-text">
-        Your Admin API Keys are used to authenticate requests to your Logik instances (for blueprint export, import, and listing).
-        Get these from: Admin → Utilities → Admin API Keys
+        Create profiles for different Logik environments. Each profile stores an environment identifier (e.g., miratech-prod, miratech-sandbox02) and its corresponding Admin API Key.
+        The extension will auto-detect which profile to use based on your current Logik instance URL.
+        Get API Keys from: Admin → Utilities → Admin API Keys
       </p>
 
-      <label for="logikApiKey">Production Environment API Key:</label>
-      <input type="password" id="logikApiKey" placeholder="Paste your Admin API Key here">
+      <button class="btn-add" id="addProfileBtn">+ Add New Profile</button>
 
-      <label for="logikApiKeySandbox">Sandbox Environment API Key (miratech-sandbox02):</label>
-      <input type="password" id="logikApiKeySandbox" placeholder="Paste your Sandbox Admin API Key here">
+      <!-- Profile Form (hidden by default) -->
+      <div class="profile-form" id="profileForm">
+        <div class="form-row">
+          <label for="profileName">Client/Profile Name:</label>
+          <input type="text" id="profileName" placeholder="e.g., Client A, Main Production">
+        </div>
+        <div class="form-row">
+          <label for="profileEnv">Environment Identifier:</label>
+          <input type="text" id="profileEnv" placeholder="e.g., miratech-prod, miratech-sandbox02">
+          <p class="help-text" style="margin-bottom: 0; margin-top: 4px;">The subdomain from your Logik URL. Example: for <strong>miratech-sandbox02</strong>.test.logik.io, enter <strong>miratech-sandbox02</strong></p>
+        </div>
+        <div class="form-row">
+          <label for="profileApiKey">Admin API Key:</label>
+          <input type="password" id="profileApiKey" placeholder="Paste your Admin API Key here">
+        </div>
+        <div class="form-buttons">
+          <button id="saveProfileBtn">Save Profile</button>
+          <button class="btn-cancel" id="cancelProfileBtn">Cancel</button>
+        </div>
+        <div class="status" id="profileFormStatus"></div>
+      </div>
 
-      <div class="status" id="logikStatus"></div>
+      <!-- Profiles List -->
+      <div class="profiles-list" id="profilesList">
+        <div class="empty-state">
+          <p>No profiles yet. Click "Add New Profile" to get started.</p>
+        </div>
+      </div>
     </div>
 
     <div class="section">
@@ -279,8 +395,8 @@
     </div>
 
     <div class="button-group">
-      <button id="saveBtn">Save Settings</button>
-      <button id="clearBtn">Clear All</button>
+      <button id="saveGithubBtn">Save GitHub Settings</button>
+      <button id="clearBtn">Clear All Settings</button>
     </div>
   </div>
 

@@ -1,33 +1,42 @@
 // Inject side panel UI into the page when DOM is ready
 console.log('[Content Script] Logik Blueprint VC loaded');
 
-// Helper function to get the correct API key for the current environment
-async function getLogikApiKeyForCurrentEnv() {
-  const data = await chrome.storage.local.get(['logikApiKey', 'logikApiKeySandbox']);
+function extractEnvironmentFromHostname() {
   const hostname = window.location.hostname;
+  const match = hostname.match(/^([a-zA-Z0-9\-]+)\.test\.logik\.io$/);
+  return match ? match[1] : null;
+}
 
-  console.log('[Content Script] Current hostname:', hostname);
+async function getLogikApiKeyForCurrentEnv() {
+  const data = await chrome.storage.local.get('profiles');
+  const profiles = data.profiles || [];
+  const currentEnv = extractEnvironmentFromHostname();
 
-  // Determine which API key to use based on hostname
-  if (hostname.includes('miratech-sandbox02')) {
-    if (!data.logikApiKeySandbox) {
-      throw new Error('Sandbox API Key not configured');
-    }
-    console.log('[Content Script] Using Sandbox API key');
-    return data.logikApiKeySandbox;
-  } else {
-    if (!data.logikApiKey) {
-      throw new Error('Production API Key not configured');
-    }
-    console.log('[Content Script] Using Production API key');
-    return data.logikApiKey;
+  console.log('[Content Script] Current hostname environment:', currentEnv);
+
+  if (!currentEnv) {
+    throw new Error('Could not determine environment from hostname');
   }
+
+  const matchingProfile = profiles.find(p => p.environment === currentEnv);
+  if (!matchingProfile) {
+    throw new Error(`No profile configured for environment: ${currentEnv}`);
+  }
+
+  console.log('[Content Script] Using profile:', matchingProfile.name);
+  return matchingProfile.apiKey;
 }
 
 function isOnBlueprintListPage() {
   // Check if URL ends with /blueprints (but not /blueprint/{name})
   const path = window.location.pathname;
   return path.endsWith('/blueprints') && !path.includes('/blueprint/');
+}
+
+function isOnTransactionPage() {
+  // Check if URL contains /transaction/ (PQ/transaction admin pages)
+  const path = window.location.pathname;
+  return path.includes('/transaction/');
 }
 
 let currentPageType = null;
@@ -168,6 +177,7 @@ function injectSidePanel() {
 
 function getPanelHTML() {
   const isBlueprintListPage = isOnBlueprintListPage();
+  const isTransactionPage = isOnTransactionPage();
   const iconUrl = chrome.runtime.getURL('src/icon.webp');
 
   if (isBlueprintListPage) {
@@ -201,14 +211,14 @@ function getPanelHTML() {
 
         <!-- Tab Navigation -->
         <div class="logik-vc-tabs" id="logik-vc-main-tabs">
-          <button class="logik-vc-tab-btn logik-vc-tab-active" data-tab="version-control">Version Control</button>
-          <button class="logik-vc-tab-btn" data-tab="rules">Rules</button>
+          <button class="logik-vc-tab-btn ${isTransactionPage ? '' : 'logik-vc-tab-active'}" data-tab="version-control" ${isTransactionPage ? 'style="display: none;"' : ''}>Version Control</button>
+          <button class="logik-vc-tab-btn ${isTransactionPage ? 'logik-vc-tab-active' : ''}" data-tab="rules">Rules</button>
           <button class="logik-vc-tab-btn" data-tab="tables" id="logik-vc-tables-tab-btn" style="display: none;">Tables</button>
         </div>
 
         <div class="logik-vc-content">
           <!-- Version Control Tab -->
-          <div id="version-control-tab" class="logik-vc-tab-content logik-vc-tab-active">
+          <div id="version-control-tab" class="logik-vc-tab-content ${isTransactionPage ? '' : 'logik-vc-tab-active'}">
             <div class="logik-vc-section">
               <button id="logik-vc-push" class="logik-vc-button">Push New Version</button>
               <div id="logik-vc-status" class="logik-vc-status"></div>
@@ -241,7 +251,7 @@ function getPanelHTML() {
           </div>
 
           <!-- Rules Tab (with nested sub-tabs) -->
-          <div id="rules-tab" class="logik-vc-tab-content">
+          <div id="rules-tab" class="logik-vc-tab-content ${isTransactionPage ? 'logik-vc-tab-active' : ''}">
             <!-- Nested tab navigation -->
             <div class="logik-vc-subtabs">
               <button class="logik-vc-subtab-btn logik-vc-subtab-active" data-subtab="related-tables">Related Tables</button>
@@ -2844,11 +2854,7 @@ async function scanForTables() {
     console.log('[Content Script] Getting rules for blueprint:', blueprintName);
     statusEl.textContent = 'Loading rules...';
 
-    const storage = await chrome.storage.local.get(['logikApiKey']);
-    const apiKey = storage.logikApiKey;
-    if (!apiKey) {
-      throw new Error('Logik API Key not configured');
-    }
+    const apiKey = await getLogikApiKeyForCurrentEnv();
 
     const url = new URL(window.location.href);
     const parts = url.hostname.split('.');
