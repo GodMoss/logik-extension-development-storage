@@ -2999,12 +2999,17 @@ async function loadRules() {
     window.logikAllRules = rules;
     window.logikRuleCount = rules.length;
 
+    console.log('[Content Script] Rules loaded:', rules.length, rules);
+    console.log('[Content Script] Grid body element:', gridBodyEl);
+
     // Check if these are transaction rules (have a category field)
     const isTransactionRules = rules.some(rule => rule.category);
 
     if (isTransactionRules) {
+      console.log('[Content Script] Populating transaction rules grid');
       populateTransactionRulesGrid(rules);
     } else {
+      console.log('[Content Script] Populating blueprint rules grid');
       populateRulesGrid(rules);
     }
 
