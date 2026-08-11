@@ -2473,6 +2473,150 @@ async function loadVersionHistory() {
   }
 }
 
+function showRestoreSuccess(filename) {
+  // Create modal overlay
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `;
+
+  // Create modal content
+  const content = document.createElement('div');
+
+  // Get current theme for colors
+  const theme = getCurrentTheme();
+  const primaryColor = theme.colors.primary;
+  const primaryLight = theme.colors.primaryLight;
+  const bgColor = theme.colors.background;
+  const borderColor = theme.colors.border;
+
+  content.style.cssText = `
+    background: ${bgColor};
+    backdrop-filter: blur(20px);
+    border: 2px solid ${borderColor};
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 400px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    position: relative;
+  `;
+
+  // Create zombie hand animation styles
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes zombieRise {
+      0% {
+        transform: translateY(60px);
+        opacity: 0;
+      }
+      50% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes handWave {
+      0%, 100% {
+        transform: rotate(-10deg);
+      }
+      25% {
+        transform: rotate(10deg);
+      }
+      50% {
+        transform: rotate(-5deg);
+      }
+      75% {
+        transform: rotate(8deg);
+      }
+    }
+
+    .zombie-hand {
+      display: inline-block;
+      font-size: 48px;
+      animation: zombieRise 0.8s ease-out, handWave 0.6s ease-in-out 0.8s infinite;
+      margin-right: 8px;
+    }
+
+    .gravestone {
+      display: inline-block;
+      font-size: 32px;
+    }
+  `;
+  document.head.appendChild(style);
+
+  content.innerHTML = `
+    <div style="display: flex; align-items: center; margin-bottom: 16px;">
+      <span class="gravestone">⚰️</span>
+      <h2 style="
+        margin: 0 0 0 12px;
+        font-size: 20px;
+        font-weight: 700;
+        color: ${primaryColor};
+      ">Resurrection Protocol</h2>
+    </div>
+
+    <div style="
+      text-align: center;
+      margin: 24px 0;
+      font-size: 64px;
+      line-height: 1;
+    ">
+      <span class="zombie-hand">🧟</span>
+    </div>
+
+    <p style="
+      margin: 0 0 24px 0;
+      font-size: 14px;
+      color: rgba(102, 102, 102, 0.9);
+      line-height: 1.6;
+      text-align: center;
+    ">Version <strong style="color: ${primaryColor};">${filename}</strong> has risen from the dead!</p>
+
+    <button id="restore-close" style="
+      width: 100%;
+      padding: 10px 16px;
+      background: linear-gradient(135deg, ${primaryColor} 0%, ${primaryLight} 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    ">Welcome Back</button>
+  `;
+
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+
+  // Auto-close after 4 seconds
+  setTimeout(() => {
+    modal.remove();
+    style.remove();
+  }, 4000);
+
+  // Close on button click
+  const closeBtn = content.querySelector('#restore-close');
+  closeBtn.addEventListener('click', () => {
+    modal.remove();
+    style.remove();
+  });
+}
+
 function showDeleteConfirmation(filename) {
   return new Promise((resolve) => {
     // Create modal overlay
@@ -2738,7 +2882,7 @@ async function handleRestoreVersion(e) {
     }
 
     console.log('[Content Script] Restore successful!');
-    alert(`Version "${filename}" has been restored successfully!`);
+    showRestoreSuccess(filename);
   } catch (error) {
     console.error('[Content Script] Restore failed:', error);
     alert(`Failed to restore version: ${error.message}`);
