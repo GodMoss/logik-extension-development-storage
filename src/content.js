@@ -1082,8 +1082,10 @@ function getStyles() {
 
     /* Transaction Page Theme - Orange Background with Black Accents */
     .logik-vc-panel.logik-vc-transaction-theme {
-      background: rgba(255, 140, 0, 0.85) !important;
-      border-color: rgba(0, 0, 0, 0.5) !important;
+      background: rgba(255, 140, 0, 0.7) !important;
+      border-color: rgba(0, 0, 0, 0.3) !important;
+      backdrop-filter: blur(10px) !important;
+      -webkit-backdrop-filter: blur(10px) !important;
     }
 
     .logik-vc-panel.logik-vc-transaction-theme .logik-vc-close,
