@@ -2239,7 +2239,7 @@ async function loadVersionHistoryWithRetry(attempt = 1) {
             <div class="logik-vc-version-date">${formatDate(v.date)}</div>
             <div class="logik-vc-version-name">${v.name}</div>
           </div>
-          <button class="logik-vc-version-delete" data-filename="${v.name}" data-sha="${v.sha}" title="Delete version">🗑️</button>
+          <button class="logik-vc-version-delete" data-filename="${v.name}" data-sha="${v.sha}" title="Delete version">⚰️</button>
         </div>
       `)
       .join('');
@@ -2447,8 +2447,8 @@ async function loadVersionHistory() {
             <div class="logik-vc-version-name">${v.name}</div>
           </div>
           <div style="display: flex; gap: 4px;">
-            <button class="logik-vc-version-restore" data-filename="${v.name}" data-sha="${v.sha}" title="Restore version">↩️</button>
-            <button class="logik-vc-version-delete" data-filename="${v.name}" data-sha="${v.sha}" title="Delete version">🗑️</button>
+            <button class="logik-vc-version-restore" data-filename="${v.name}" data-sha="${v.sha}" title="Restore version">🧟</button>
+            <button class="logik-vc-version-delete" data-filename="${v.name}" data-sha="${v.sha}" title="Delete version">⚰️</button>
           </div>
         </div>
       `)
