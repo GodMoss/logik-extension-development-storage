@@ -18,23 +18,23 @@ const THEMES = {
   configurator: {
     id: 'configurator',
     name: 'Configurator (Blueprint)',
-    description: 'Purple with blue accents for blueprint configurator pages',
+    description: 'Light purple with blue accents for blueprint configurator pages',
     detector: () => !isOnTransactionPage() && !isOnTablesPage() && !isOnBlueprintListPage(),
     colors: {
       primary: '#7c3aed',
       primaryLight: '#3b82f6',
-      background: 'rgba(124, 58, 237, 0.1)',
-      border: 'rgba(99, 102, 241, 0.5)',
-      borderHover: 'rgba(99, 102, 241, 0.7)',
+      background: 'rgba(224, 204, 255, 0.85)',
+      border: 'rgba(124, 58, 237, 0.4)',
+      borderHover: 'rgba(124, 58, 237, 0.6)',
       text: '#7c3aed',
       textLight: '#999',
       buttonBg: 'linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%)',
       buttonBgHover: 'linear-gradient(135deg, #6d28d9 0%, #2563eb 100%)',
-      tableRowBg: 'rgba(224, 215, 255, 0.5)',
-      tableRowHover: 'rgba(196, 181, 253, 0.6)',
-      headerBg: 'rgba(224, 215, 255, 0.7)',
+      tableRowBg: 'rgba(237, 229, 255, 0.7)',
+      tableRowHover: 'rgba(220, 204, 255, 0.8)',
+      headerBg: 'rgba(220, 204, 255, 0.8)',
       headerText: '#3b82f6',
-      modalBg: 'rgba(55, 30, 100, 0.95)',
+      modalBg: 'rgba(224, 204, 255, 0.95)',
       modalBorder: 'rgba(124, 58, 237, 0.3)',
       backdropFilter: 'blur(10px)'
     }
@@ -47,18 +47,18 @@ const THEMES = {
     colors: {
       primary: '#10b981',
       primaryLight: '#14b8a6',
-      background: 'rgba(16, 185, 129, 0.15)',
-      border: 'rgba(16, 185, 129, 0.5)',
-      borderHover: 'rgba(16, 185, 129, 0.7)',
+      background: 'rgba(167, 243, 208, 0.85)',
+      border: 'rgba(16, 185, 129, 0.4)',
+      borderHover: 'rgba(16, 185, 129, 0.6)',
       text: '#10b981',
       textLight: '#999',
       buttonBg: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)',
       buttonBgHover: 'linear-gradient(135deg, #059669 0%, #0d9488 100%)',
-      tableRowBg: 'rgba(204, 250, 225, 0.5)',
-      tableRowHover: 'rgba(167, 243, 208, 0.6)',
-      headerBg: 'rgba(204, 250, 225, 0.7)',
+      tableRowBg: 'rgba(204, 250, 225, 0.7)',
+      tableRowHover: 'rgba(167, 243, 208, 0.8)',
+      headerBg: 'rgba(167, 243, 208, 0.8)',
       headerText: '#14b8a6',
-      modalBg: 'rgba(15, 75, 55, 0.95)',
+      modalBg: 'rgba(204, 250, 225, 0.95)',
       modalBorder: 'rgba(16, 185, 129, 0.3)',
       backdropFilter: 'blur(10px)'
     }
@@ -69,21 +69,21 @@ const THEMES = {
     description: 'Pink with red accents for table management and export pages',
     detector: () => isOnTablesPage(),
     colors: {
-      primary: '#ec4899',
-      primaryLight: '#dc2626',
-      background: 'rgba(236, 72, 153, 0.1)',
-      border: 'rgba(220, 38, 38, 0.5)',
-      borderHover: 'rgba(220, 38, 38, 0.7)',
-      text: '#ec4899',
+      primary: '#d63031',
+      primaryLight: '#e84393',
+      background: 'rgba(255, 240, 240, 0.85)',
+      border: 'rgba(255, 107, 107, 0.5)',
+      borderHover: 'rgba(255, 107, 107, 0.7)',
+      text: '#d63031',
       textLight: '#999',
-      buttonBg: 'linear-gradient(135deg, #ec4899 0%, #dc2626 100%)',
-      buttonBgHover: 'linear-gradient(135deg, #db2777 0%, #b91c1c 100%)',
-      tableRowBg: 'rgba(254, 226, 226, 0.6)',
-      tableRowHover: 'rgba(254, 205, 211, 0.7)',
-      headerBg: 'rgba(254, 226, 226, 0.8)',
-      headerText: '#dc2626',
-      modalBg: 'rgba(70, 20, 30, 0.95)',
-      modalBorder: 'rgba(236, 72, 153, 0.3)',
+      buttonBg: 'linear-gradient(135deg, #d63031 0%, #e84393 100%)',
+      buttonBgHover: 'linear-gradient(135deg, #c41e1e 0%, #d63384 100%)',
+      tableRowBg: 'rgba(255, 245, 245, 0.7)',
+      tableRowHover: 'rgba(254, 225, 225, 0.8)',
+      headerBg: 'rgba(255, 240, 240, 1)',
+      headerText: '#e84393',
+      modalBg: 'rgba(255, 240, 240, 0.95)',
+      modalBorder: 'rgba(214, 48, 49, 0.3)',
       backdropFilter: 'blur(10px)'
     }
   }
@@ -1199,10 +1199,10 @@ function getStyles() {
       cursor: pointer;
     }
 
-    /* Configurator Theme - Purple Background with Blue Accents */
+    /* Configurator Theme - Light Purple Background with Blue Accents */
     .logik-vc-panel.logik-vc-configurator-theme {
-      background: rgba(124, 58, 237, 0.7) !important;
-      border-color: rgba(99, 102, 241, 0.5) !important;
+      background: rgba(224, 204, 255, 0.85) !important;
+      border-color: rgba(124, 58, 237, 0.4) !important;
       backdrop-filter: blur(10px) !important;
       -webkit-backdrop-filter: blur(10px) !important;
     }
@@ -1250,8 +1250,8 @@ function getStyles() {
 
     /* Transaction Theme - Mint Background with Green Accents */
     .logik-vc-panel.logik-vc-transaction-theme {
-      background: rgba(16, 185, 129, 0.15) !important;
-      border-color: rgba(16, 185, 129, 0.5) !important;
+      background: rgba(167, 243, 208, 0.85) !important;
+      border-color: rgba(16, 185, 129, 0.4) !important;
       backdrop-filter: blur(10px) !important;
       -webkit-backdrop-filter: blur(10px) !important;
     }
@@ -1299,8 +1299,8 @@ function getStyles() {
 
     /* Tables Theme - Pink Background with Red Accents */
     .logik-vc-panel.logik-vc-tables-theme {
-      background: rgba(236, 72, 153, 0.15) !important;
-      border-color: rgba(220, 38, 38, 0.5) !important;
+      background: rgba(255, 240, 240, 0.85) !important;
+      border-color: rgba(255, 107, 107, 0.5) !important;
       backdrop-filter: blur(10px) !important;
       -webkit-backdrop-filter: blur(10px) !important;
     }
