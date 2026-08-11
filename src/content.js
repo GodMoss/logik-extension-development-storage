@@ -3002,10 +3002,8 @@ async function loadRules() {
     console.log('[Content Script] Rules loaded:', rules.length, rules);
     console.log('[Content Script] Grid body element:', gridBodyEl);
 
-    // Check if these are transaction rules (have a category field)
-    const isTransactionRules = rules.some(rule => rule.category);
-
-    if (isTransactionRules) {
+    // Determine grid type based on page, not rules
+    if (isOnTransactionPage()) {
       console.log('[Content Script] Populating transaction rules grid');
       populateTransactionRulesGrid(rules);
     } else {
