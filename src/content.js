@@ -114,6 +114,11 @@ function updatePanelForCurrentPage() {
     newPanel.classList.add('open');
   }
 
+  // Apply transaction theme if on transaction page
+  if (isOnTransactionPage()) {
+    newPanel.classList.add('logik-vc-transaction-theme');
+  }
+
   console.log('[Content Script] Panel re-injected with', newPageType, 'view');
 
   // Wire up listeners
@@ -153,6 +158,10 @@ function injectSidePanel() {
     panel = document.getElementById('logik-blueprint-vc-panel');
     if (panel) {
       panel.classList.remove('open', 'expanded');
+      // Apply transaction theme if on transaction page
+      if (isOnTransactionPage()) {
+        panel.classList.add('logik-vc-transaction-theme');
+      }
     }
 
     // Wire up event listeners
@@ -1069,6 +1078,72 @@ function getStyles() {
     .logik-vc-filter-option input[type="checkbox"] {
       margin-right: 8px;
       cursor: pointer;
+    }
+
+    /* Transaction Page Theme - Black & Orange Spooky */
+    .logik-vc-panel.logik-vc-transaction-theme {
+      background: rgba(20, 20, 20, 0.85) !important;
+      border-color: rgba(255, 140, 0, 0.5) !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-close,
+    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-collapse-arrow {
+      color: #ff8c00 !important;
+      border-color: rgba(255, 140, 0, 0.5) !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme h2 {
+      background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%) !important;
+      -webkit-background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-tab-btn {
+      color: #999 !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-tab-btn.logik-vc-tab-active {
+      color: #ff8c00 !important;
+      border-bottom-color: #ff8c00 !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-button {
+      background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%) !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-button:hover {
+      background: linear-gradient(135deg, #ff7700 0%, #ff9400 100%) !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-refresh-btn:hover {
+      background: rgba(255, 140, 0, 0.2) !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-rules-category-header {
+      background: rgba(255, 140, 0, 0.15) !important;
+      border-bottom-color: rgba(255, 140, 0, 0.3) !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-modal-backdrop {
+      background: rgba(20, 20, 20, 0.7) !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-modal-content {
+      background: rgba(40, 40, 40, 0.95) !important;
+      border-color: rgba(255, 140, 0, 0.3) !important;
+      color: #fff !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-modal-content h3 {
+      color: #ff8c00 !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-modal-btn-confirm {
+      background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%) !important;
+    }
+
+    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-modal-btn-confirm:hover {
+      background: linear-gradient(135deg, #ff7700 0%, #ff9400 100%) !important;
     }
   `;
 }
