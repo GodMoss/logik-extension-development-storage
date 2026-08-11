@@ -2499,6 +2499,10 @@ function showDeleteConfirmation(filename) {
     const theme = getCurrentTheme();
     const primaryColor = theme.colors.primary;
     const primaryLight = theme.colors.primaryLight;
+    const bgColor = theme.colors.background;
+
+    // Update modal background to match theme
+    modal.style.background = bgColor;
 
     content.innerHTML = `
       <h2 style="
