@@ -173,7 +173,7 @@ function getPanelHTML() {
   if (isBlueprintListPage) {
     // Blueprint list page - show all blueprints
     return `
-      <button id="logik-blueprint-vc-toggle" class="logik-vc-toggle" title="Blueprints" style="background-image: url('${iconUrl}');"></button>
+      <button id="logik-blueprint-vc-toggle" class="logik-vc-toggle" title="Blueprints" style="background-image: url('${iconUrl}')"></button>
       <div id="logik-blueprint-vc-panel" class="logik-vc-panel">
         <div class="logik-vc-header">
           <h2>Blueprints</h2>
@@ -191,7 +191,7 @@ function getPanelHTML() {
   } else {
     // Specific blueprint page - show version history and related tables
     return `
-      <button id="logik-blueprint-vc-toggle" class="logik-vc-toggle" title="Admin Masterlord" style="background-image: url('${iconUrl}'); background-size: cover; background-position: center;"></button>
+      <button id="logik-blueprint-vc-toggle" class="logik-vc-toggle" title="Admin Masterlord" style="background-image: url('${iconUrl}')"></button>
       <div id="logik-blueprint-vc-panel" class="logik-vc-panel">
         <div class="logik-vc-header">
           <h2>Admin Masterlord</h2>
@@ -371,9 +371,10 @@ function getStyles() {
       height: 50px;
       border-radius: 50%;
       background: rgba(255, 107, 107, 0.2);
-      background-size: 75%;
+      background-size: 100%;
       background-repeat: no-repeat;
-      background-position: 58% center;
+      background-position: center;
+      color: white;
       border: 2px solid rgba(255, 107, 107, 0.5);
       cursor: pointer;
       box-shadow: 0 8px 32px rgba(255, 107, 107, 0.2), inset 0 0 20px rgba(255, 255, 255, 0.3);
@@ -381,15 +382,7 @@ function getStyles() {
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.3s ease;
       backdrop-filter: blur(10px);
-      padding: 0;
-    }
-    .logik-vc-toggle:hover {
-      background: rgba(255, 107, 107, 0.3);
-      border-color: rgba(255, 107, 107, 0.7);
-      box-shadow: 0 8px 40px rgba(255, 107, 107, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.4);
-      transform: translateY(-50%) scale(1.08);
     }
     .logik-vc-panel {
       position: fixed;
@@ -1110,6 +1103,10 @@ function handleTablesTabVisibility() {
   const tablesTabBtn = document.getElementById('logik-vc-tables-tab-btn');
   const versionControlBtn = document.querySelector('[data-tab="version-control"]');
   const rulesBtn = document.querySelector('[data-tab="rules"]');
+
+  if (!tablesTabBtn || !versionControlBtn || !rulesBtn) {
+    return; // Elements don't exist on this page
+  }
 
   if (isOnTablesPage) {
     // Show only Tables tab
