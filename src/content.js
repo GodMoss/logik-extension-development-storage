@@ -2492,12 +2492,12 @@ function showRestoreSuccess(filename) {
   // Create modal content
   const content = document.createElement('div');
 
-  // Get current theme for colors
-  const theme = getCurrentTheme();
-  const primaryColor = theme.colors.primary;
-  const primaryLight = theme.colors.primaryLight;
-  const bgColor = theme.colors.background;
-  const borderColor = theme.colors.border;
+  // Use black with red accents
+  const bgColor = 'rgba(20, 20, 20, 0.95)';
+  const primaryColor = '#d32f2f';
+  const primaryLight = '#ff5252';
+  const textColor = '#ffffff';
+  const borderColor = 'rgba(211, 47, 47, 0.3)';
 
   content.style.cssText = `
     background: ${bgColor};
@@ -2506,7 +2506,7 @@ function showRestoreSuccess(filename) {
     border-radius: 16px;
     padding: 32px;
     max-width: 400px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 20px 60px rgba(211, 47, 47, 0.2);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     position: relative;
   `;
@@ -2567,7 +2567,7 @@ function showRestoreSuccess(filename) {
     <p style="
       margin: 0 0 24px 0;
       font-size: 14px;
-      color: rgba(102, 102, 102, 0.9);
+      color: #cccccc;
       line-height: 1.6;
       text-align: center;
     ">Version <strong style="color: ${primaryColor};">${filename}</strong> has risen from the dead!</p>
