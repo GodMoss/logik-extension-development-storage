@@ -799,6 +799,7 @@ async function restoreVersion(blueprintName, filename) {
 
     // For now, use the first profile (in the future, detect based on URL)
     const profile = profiles[0];
+    const apiKey = profile.apiKey;
     const environment = profile.environment;
     console.log('[restoreVersion] Using environment:', environment);
 
@@ -863,9 +864,9 @@ async function restoreVersion(blueprintName, filename) {
 
       const statusResponse = await fetch(jobUrl, {
         headers: {
+          'Authorization': `Bearer ${apiKey}`,
           'Accept': 'application/json',
         },
-        credentials: 'include',
       });
 
       if (!statusResponse.ok) {
