@@ -53,7 +53,24 @@ async function loadSettings() {
   const profiles = data.profiles || [];
   renderProfiles(profiles);
 
+  // Setup event delegation for profile actions
+  setupProfileEventListeners();
+
   console.log('[Options] Settings loaded');
+}
+
+function setupProfileEventListeners() {
+  const profilesList = document.getElementById('profilesList');
+
+  profilesList.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('btn-edit')) {
+      const index = parseInt(e.target.dataset.index);
+      await editProfile(index);
+    } else if (e.target.classList.contains('btn-delete')) {
+      const index = parseInt(e.target.dataset.index);
+      await deleteProfile(index);
+    }
+  });
 }
 
 function renderProfiles(profiles) {
@@ -77,8 +94,8 @@ function renderProfiles(profiles) {
         <div class="profile-env">Environment: ${escapeHtml(profile.environment)}</div>
       </div>
       <div class="profile-actions">
-        <button class="btn-edit" onclick="editProfile(${index})">Edit</button>
-        <button class="btn-delete" onclick="deleteProfile(${index})">Delete</button>
+        <button class="btn-edit" data-index="${index}">Edit</button>
+        <button class="btn-delete" data-index="${index}">Delete</button>
       </div>
     </div>
   `
