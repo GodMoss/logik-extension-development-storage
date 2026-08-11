@@ -756,29 +756,34 @@ async function restoreVersion(blueprintName, filename) {
 
     // Ensure credentials are loaded
     await ensureCredentials();
+    console.log('[restoreVersion] Credentials loaded. GitHub config:', {
+      username: CONFIG.GITHUB_USERNAME,
+      repo: CONFIG.REPO_NAME,
+      token: CONFIG.GITHUB_TOKEN ? 'present' : 'missing'
+    });
 
     // Download the ZIP from GitHub
     const filepath = `${blueprintName}/${filename}`;
-    console.log('[restoreVersion] Downloading from GitHub:', filepath);
+    const githubUrl = `https://api.github.com/repos/${CONFIG.GITHUB_USERNAME}/${CONFIG.REPO_NAME}/contents/${filepath}`;
+    console.log('[restoreVersion] Downloading from GitHub URL:', githubUrl);
 
-    const downloadResponse = await fetch(
-      `https://api.github.com/repos/${CONFIG.GITHUB_USERNAME}/${CONFIG.REPO_NAME}/contents/${filepath}`,
-      {
-        headers: {
-          Authorization: `token ${CONFIG.GITHUB_TOKEN}`,
-          Accept: 'application/vnd.github.v3.raw',
-        },
-      }
-    );
+    const downloadResponse = await fetch(githubUrl, {
+      headers: {
+        Authorization: `token ${CONFIG.GITHUB_TOKEN}`,
+        Accept: 'application/vnd.github.v3.raw',
+      },
+    });
+
+    console.log('[restoreVersion] GitHub response status:', downloadResponse.status, downloadResponse.statusText);
 
     if (!downloadResponse.ok) {
       const errorText = await downloadResponse.text();
       console.error('[restoreVersion] Failed to download from GitHub:', downloadResponse.status, errorText);
-      throw new Error(`Failed to download version from GitHub: ${downloadResponse.status}`);
+      throw new Error(`Failed to download version from GitHub: ${downloadResponse.status} - ${errorText}`);
     }
 
     const zipBlob = await downloadResponse.blob();
-    console.log('[restoreVersion] Downloaded ZIP, size:', zipBlob.size);
+    console.log('[restoreVersion] Downloaded ZIP successfully, size:', zipBlob.size, 'bytes');
 
     // Get the Logik API key from storage
     const data = await new Promise((resolve) => {
