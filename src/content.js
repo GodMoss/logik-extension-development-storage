@@ -1079,7 +1079,9 @@ function setupPanelListeners() {
   });
 
   closeBtn.addEventListener('click', () => {
-    panel.classList.remove('open');
+    panel.classList.remove('open', 'expanded');
+    const collapseArrow = document.getElementById('logik-vc-collapse-arrow');
+    if (collapseArrow) collapseArrow.textContent = '◄';
   });
 
   // Only attach these listeners if elements exist (on specific blueprint pages, not blueprint list)
