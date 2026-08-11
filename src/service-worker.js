@@ -858,7 +858,7 @@ async function restoreVersion(blueprintName, filename) {
     let pollCount = 0;
     const maxPolls = 120; // Max 2 minutes (120 * 1 second)
 
-    while (jobStatus !== 'COMPLETE' && pollCount < maxPolls) {
+    while (jobStatus !== 'COMPLETED' && pollCount < maxPolls) {
       await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second
 
       const statusResponse = await fetch(jobUrl, {
@@ -880,7 +880,7 @@ async function restoreVersion(blueprintName, filename) {
       pollCount++;
     }
 
-    if (jobStatus !== 'COMPLETE') {
+    if (jobStatus !== 'COMPLETED') {
       throw new Error(`Job did not complete within timeout. Final status: ${jobStatus}`);
     }
 
