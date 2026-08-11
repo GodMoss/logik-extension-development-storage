@@ -2446,12 +2446,20 @@ async function loadVersionHistory() {
             <div class="logik-vc-version-date">${formatDate(v.date)}</div>
             <div class="logik-vc-version-name">${v.name}</div>
           </div>
-          <button class="logik-vc-version-delete" data-filename="${v.name}" data-sha="${v.sha}" title="Delete version">🗑️</button>
+          <div style="display: flex; gap: 4px;">
+            <button class="logik-vc-version-restore" data-filename="${v.name}" data-sha="${v.sha}" title="Restore version">↩️</button>
+            <button class="logik-vc-version-delete" data-filename="${v.name}" data-sha="${v.sha}" title="Delete version">🗑️</button>
+          </div>
         </div>
       `)
       .join('');
 
     listEl.innerHTML = html;
+
+    // Wire up restore buttons
+    listEl.querySelectorAll('.logik-vc-version-restore').forEach(btn => {
+      btn.addEventListener('click', handleRestoreVersion);
+    });
 
     // Wire up delete buttons
     listEl.querySelectorAll('.logik-vc-version-delete').forEach(btn => {
@@ -2703,6 +2711,41 @@ function showThemedAlert(message, title = 'Alert') {
       okBtn.style.boxShadow = '0 4px 15px rgba(255, 107, 107, 0.2)';
     });
   });
+}
+
+async function handleRestoreVersion(e) {
+  e.stopPropagation();
+
+  const button = e.target.closest('.logik-vc-version-restore');
+  const filename = button.dataset.filename;
+  const blueprintName = extractBlueprintNameFromUI();
+
+  console.log('[Content Script] Restore requested for:', filename);
+
+  try {
+    button.disabled = true;
+    button.style.opacity = '0.3';
+
+    console.log('[Content Script] Sending restore request...');
+    const response = await chrome.runtime.sendMessage({
+      action: 'restoreVersion',
+      blueprintName: blueprintName,
+      filename: filename,
+    });
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+
+    console.log('[Content Script] Restore successful!');
+    alert(`Version "${filename}" has been restored successfully!`);
+  } catch (error) {
+    console.error('[Content Script] Restore failed:', error);
+    alert(`Failed to restore version: ${error.message}`);
+  } finally {
+    button.disabled = false;
+    button.style.opacity = '1';
+  }
 }
 
 async function handleDeleteVersion(e) {
