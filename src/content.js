@@ -2490,6 +2490,89 @@ function createSimpleZip(files) {
   return zipData;
 }
 
+async function loadBlueprintRules() {
+  // Extract blueprint name from URL
+  const urlMatch = window.location.pathname.match(/\/blueprint\/([^\/]+)/);
+  const blueprintName = urlMatch ? urlMatch[1] : '';
+
+  if (!blueprintName) {
+    throw new Error('Could not determine blueprint name');
+  }
+
+  // Get credentials from storage (auto-detects environment)
+  const apiKey = await getLogikApiKeyForCurrentEnv();
+
+  // Extract tenant and sector from current URL
+  const currentUrl = new URL(window.location.href);
+  const hostname = currentUrl.hostname;
+  const parts = hostname.split('.');
+  const tenant = parts[0];
+  const sector = parts[1];
+
+  // Fetch all rules from API with pagination
+  let allRules = [];
+  let page = 0;
+  const pageSize = 5000;
+  let hasMorePages = true;
+
+  while (hasMorePages) {
+    const rulesUrl = `https://${tenant}.${sector}.logik.io/api/admin/v2/blueprints/${blueprintName}/rules?page=${page}&size=${pageSize}&sort=modified%2CDESC`;
+    const rulesResponse = await fetch(rulesUrl, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!rulesResponse.ok) {
+      throw new Error(`Failed to load rules: ${rulesResponse.status}`);
+    }
+
+    const rulesData = await rulesResponse.json();
+    const pageRules = rulesData.content || [];
+
+    console.log('[Content Script] Page', page, 'returned', pageRules.length, 'rules');
+
+    allRules = allRules.concat(pageRules);
+
+    // Check if there are more pages
+    hasMorePages = pageRules.length === pageSize;
+    page++;
+  }
+
+  console.log('[Content Script] Total blueprint rules from API:', allRules.length);
+  return allRules;
+}
+
+async function loadTransactionRules() {
+  const hostname = window.location.hostname;
+  const baseUrl = `https://${hostname}`;
+
+  try {
+    // Fetch both transaction header and transaction line rules
+    const [headerResponse, lineResponse] = await Promise.all([
+      fetch(`${baseUrl}/a/txn-header/v2/blueprints/default/rules?size=1000&sort=modified%2CDESC`),
+      fetch(`${baseUrl}/a/txn-line/v2/blueprints/default/rules?size=1000&sort=modified%2CDESC`)
+    ]);
+
+    if (!headerResponse.ok || !lineResponse.ok) {
+      throw new Error('Failed to fetch transaction rules');
+    }
+
+    const headerData = await headerResponse.json();
+    const lineData = await lineResponse.json();
+
+    const headerRules = (headerData.content || []).map(rule => ({ ...rule, category: 'Transaction' }));
+    const lineRules = (lineData.content || []).map(rule => ({ ...rule, category: 'Transaction Line' }));
+
+    console.log('[Content Script] Transaction rules:', headerRules.length, 'Transaction Line rules:', lineRules.length);
+    return [...headerRules, ...lineRules];
+  } catch (error) {
+    console.error('[Content Script] Error fetching transaction rules:', error);
+    throw error;
+  }
+}
+
 async function loadRules() {
   const statusEl = document.getElementById('logik-vc-rules-status');
   const errorEl = document.getElementById('logik-vc-rules-error');
@@ -2499,62 +2582,19 @@ async function loadRules() {
   errorEl.textContent = '';
 
   try {
-    // Extract blueprint name from URL
-    const urlMatch = window.location.pathname.match(/\/blueprint\/([^\/]+)/);
-    const blueprintName = urlMatch ? urlMatch[1] : '';
+    let rules = [];
 
-    if (!blueprintName) {
-      throw new Error('Could not determine blueprint name');
+    // Check if we're on a transaction page
+    if (isOnTransactionPage()) {
+      console.log('[Content Script] Loading transaction rules...');
+      rules = await loadTransactionRules();
+    } else {
+      console.log('[Content Script] Loading blueprint rules...');
+      rules = await loadBlueprintRules();
     }
-
-    // Get credentials from storage (auto-detects environment)
-    const apiKey = await getLogikApiKeyForCurrentEnv();
-
-    // Extract tenant and sector from current URL
-    const currentUrl = new URL(window.location.href);
-    const hostname = currentUrl.hostname;
-    const parts = hostname.split('.');
-    const tenant = parts[0];
-    const sector = parts[1];
-
-    // Fetch all rules from API with pagination
-    let allRules = [];
-    let page = 0;
-    const pageSize = 5000;
-    let hasMorePages = true;
-
-    while (hasMorePages) {
-      const rulesUrl = `https://${tenant}.${sector}.logik.io/api/admin/v2/blueprints/${blueprintName}/rules?page=${page}&size=${pageSize}&sort=modified%2CDESC`;
-      const rulesResponse = await fetch(rulesUrl, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!rulesResponse.ok) {
-        throw new Error(`Failed to load rules: ${rulesResponse.status}`);
-      }
-
-      const rulesData = await rulesResponse.json();
-      const pageRules = rulesData.content || [];
-
-      console.log('[Content Script] Page', page, 'returned', pageRules.length, 'rules');
-
-      allRules = allRules.concat(pageRules);
-
-      // Check if there are more pages
-      hasMorePages = pageRules.length === pageSize;
-      page++;
-    }
-
-    console.log('[Content Script] Total rules from API:', allRules.length);
-
-    let rules = allRules;
 
     // Filter to only active rules
     rules = rules.filter(rule => rule.status === 'active');
-
     console.log('[Content Script] Filtered active rules:', rules.length);
 
     if (rules.length === 0) {
@@ -2563,53 +2603,20 @@ async function loadRules() {
       return;
     }
 
-    // Action type icons mapping (6 action types)
-    const actionIcons = {
-      determinationAction: { icon: '⚙️', label: 'Determination' },
-      exclusionAction: { icon: '🚫', label: 'Exclusion' },
-      inclusionAction: { icon: '➕', label: 'Inclusion' },
-      messageAction: { icon: '💬', label: 'Message' },
-      productAction: { icon: '📦', label: 'Product' },
-      visibilityAction: { icon: '👁️', label: 'Hiding' }
-    };
-
-    // Populate grid
-    gridBodyEl.innerHTML = rules
-      .map(rule => {
-        const lastModified = rule.modified ? new Date(rule.modified).toLocaleString() : 'N/A';
-
-        // Build action icons based on actionSummary
-        const actionIcons_list = [];
-        if (rule.actionSummary) {
-          Object.entries(rule.actionSummary).forEach(([key, value]) => {
-            if (value > 0 && actionIcons[key]) {
-              const { icon, label } = actionIcons[key];
-              actionIcons_list.push(`<span title="${label}" style="cursor: help; font-size: 16px; margin-right: 4px;">${icon}</span>`);
-            }
-          });
-        }
-
-        return `
-          <tr>
-            <td class="logik-vc-grid-checkbox"><button class="logik-vc-copy-btn" data-text="${rule.variableName || ''}" title="Copy to clipboard">📋</button></td>
-            <td class="logik-vc-grid-name">${rule.name || ''}</td>
-            <td class="logik-vc-grid-variable">${rule.variableName || ''}</td>
-            <td class="logik-vc-grid-description">${rule.description || ''}</td>
-            <td class="logik-vc-grid-actions">${actionIcons_list.join('')}</td>
-            <td class="logik-vc-grid-modified">${lastModified}</td>
-          </tr>
-        `;
-      })
-      .join('');
-
     // Store rules globally for filtering
     window.logikAllRules = rules;
     window.logikRuleCount = rules.length;
 
-    // Populate the grid and setup filters
-    populateRulesGrid(rules);
-    setupRulesFilters();
+    // Check if these are transaction rules (have a category field)
+    const isTransactionRules = rules.some(rule => rule.category);
 
+    if (isTransactionRules) {
+      populateTransactionRulesGrid(rules);
+    } else {
+      populateRulesGrid(rules);
+    }
+
+    setupRulesFilters();
     statusEl.textContent = `Loaded ${rules.length} active rule(s)`;
   } catch (error) {
     console.error('[Content Script] Failed to load rules:', error);
@@ -2677,6 +2684,102 @@ function populateRulesGrid(rulesToDisplay) {
         }, 1500);
       });
     }
+  });
+}
+
+function populateTransactionRulesGrid(rulesToDisplay) {
+  const gridBodyEl = document.getElementById('logik-vc-rules-grid-body');
+
+  // Action type icons mapping (6 action types)
+  const actionIcons = {
+    determinationAction: { icon: '⚙️', label: 'Determination' },
+    exclusionAction: { icon: '🚫', label: 'Exclusion' },
+    inclusionAction: { icon: '➕', label: 'Inclusion' },
+    messageAction: { icon: '💬', label: 'Message' },
+    productAction: { icon: '📦', label: 'Product' },
+    visibilityAction: { icon: '👁️', label: 'Hiding' }
+  };
+
+  if (rulesToDisplay.length === 0) {
+    gridBodyEl.innerHTML = '<tr class="logik-vc-grid-placeholder"><td colspan="6" style="padding: 32px; text-align: center; color: #999; font-size: 12px;">No rules match the current filters</td></tr>';
+    return;
+  }
+
+  // Group rules by category (Transaction or Transaction Line)
+  const transactionRules = rulesToDisplay.filter(r => r.category === 'Transaction');
+  const transactionLineRules = rulesToDisplay.filter(r => r.category === 'Transaction Line');
+
+  // Helper function to render a rules group
+  const renderRulesGroup = (rules, categoryLabel) => {
+    if (rules.length === 0) return '';
+
+    return `
+      <tr class="logik-vc-rules-category-header" data-category="${categoryLabel}">
+        <td colspan="6" style="padding: 12px 16px; background: #f0f0f0; font-weight: 600; cursor: pointer; border-bottom: 1px solid #ddd;">
+          <span class="logik-vc-category-toggle" style="margin-right: 8px;">▼</span>
+          ${categoryLabel} (${rules.length})
+        </td>
+      </tr>
+      ${rules
+        .map(rule => {
+          const lastModified = rule.modified ? new Date(rule.modified).toLocaleString() : 'N/A';
+          const actionIcons_list = [];
+          if (rule.actionSummary) {
+            Object.entries(rule.actionSummary).forEach(([key, value]) => {
+              if (value > 0 && actionIcons[key]) {
+                const { icon, label } = actionIcons[key];
+                actionIcons_list.push(`<span title="${label}" style="cursor: help; font-size: 16px; margin-right: 4px;">${icon}</span>`);
+              }
+            });
+          }
+
+          return `
+            <tr class="logik-vc-rules-row" data-category="${categoryLabel}">
+              <td class="logik-vc-grid-checkbox"><button class="logik-vc-copy-btn" data-text="${rule.variableName || ''}" title="Copy to clipboard">📋</button></td>
+              <td class="logik-vc-grid-name">${rule.name || ''}</td>
+              <td class="logik-vc-grid-variable">${rule.variableName || ''}</td>
+              <td class="logik-vc-grid-description">${rule.description || ''}</td>
+              <td class="logik-vc-grid-actions">${actionIcons_list.join('')}</td>
+              <td class="logik-vc-grid-modified">${lastModified}</td>
+            </tr>
+          `;
+        })
+        .join('')}
+    `;
+  };
+
+  // Render both categories
+  gridBodyEl.innerHTML = renderRulesGroup(transactionRules, 'Transaction') + renderRulesGroup(transactionLineRules, 'Transaction Line');
+
+  // Set up copy button listeners
+  gridBodyEl.addEventListener('click', (e) => {
+    if (e.target.classList.contains('logik-vc-copy-btn')) {
+      const text = e.target.dataset.text;
+      navigator.clipboard.writeText(text).then(() => {
+        const originalText = e.target.textContent;
+        e.target.textContent = '✓';
+        setTimeout(() => {
+          e.target.textContent = originalText;
+        }, 1500);
+      });
+    }
+  });
+
+  // Set up category toggle functionality
+  const categoryHeaders = gridBodyEl.querySelectorAll('.logik-vc-rules-category-header');
+  categoryHeaders.forEach(header => {
+    header.addEventListener('click', () => {
+      const category = header.dataset.category;
+      const rows = gridBodyEl.querySelectorAll(`.logik-vc-rules-row[data-category="${category}"]`);
+      const toggle = header.querySelector('.logik-vc-category-toggle');
+
+      rows.forEach(row => {
+        const isHidden = row.style.display === 'none';
+        row.style.display = isHidden ? '' : 'none';
+      });
+
+      toggle.textContent = rows[0]?.style.display === 'none' ? '▶' : '▼';
+    });
   });
 }
 
