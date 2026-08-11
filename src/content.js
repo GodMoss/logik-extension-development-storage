@@ -2511,43 +2511,31 @@ function showRestoreSuccess(filename) {
     position: relative;
   `;
 
-  // Create zombie hand animation styles
+  // Create dancing skeleton animation styles
   const style = document.createElement('style');
   style.textContent = `
-    @keyframes zombieRise {
+    @keyframes skeletonDance {
       0% {
-        transform: translateY(60px);
-        opacity: 0;
-      }
-      50% {
-        opacity: 1;
-      }
-      100% {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
-
-    @keyframes handWave {
-      0%, 100% {
-        transform: rotate(-10deg);
+        transform: translateY(0) rotate(-5deg);
       }
       25% {
-        transform: rotate(10deg);
+        transform: translateY(-10px) rotate(5deg);
       }
       50% {
-        transform: rotate(-5deg);
+        transform: translateY(0) rotate(-5deg);
       }
       75% {
-        transform: rotate(8deg);
+        transform: translateY(-10px) rotate(5deg);
+      }
+      100% {
+        transform: translateY(0) rotate(-5deg);
       }
     }
 
-    .zombie-hand {
+    .dancing-skeleton {
       display: inline-block;
-      font-size: 48px;
-      animation: zombieRise 0.8s ease-out, handWave 0.6s ease-in-out 0.8s infinite;
-      margin-right: 8px;
+      font-size: 64px;
+      animation: skeletonDance 0.8s ease-in-out infinite;
     }
 
     .gravestone {
@@ -2571,10 +2559,9 @@ function showRestoreSuccess(filename) {
     <div style="
       text-align: center;
       margin: 24px 0;
-      font-size: 64px;
       line-height: 1;
     ">
-      <span class="zombie-hand">🧟</span>
+      <span class="dancing-skeleton">💀</span>
     </div>
 
     <p style="
@@ -2603,17 +2590,19 @@ function showRestoreSuccess(filename) {
   modal.appendChild(content);
   document.body.appendChild(modal);
 
-  // Auto-close after 4 seconds
-  setTimeout(() => {
-    modal.remove();
-    style.remove();
-  }, 4000);
-
   // Close on button click
   const closeBtn = content.querySelector('#restore-close');
   closeBtn.addEventListener('click', () => {
     modal.remove();
     style.remove();
+  });
+
+  // Also close when clicking outside the modal
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.remove();
+      style.remove();
+    }
   });
 }
 
