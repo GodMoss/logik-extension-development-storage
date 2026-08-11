@@ -801,17 +801,35 @@ async function restoreVersion(blueprintName, filename) {
     const logikUrl = `https://${environment}.test.logik.io/api/admin/v2/uploadFile`;
     console.log('[restoreVersion] Uploading to Logik:', logikUrl);
 
-    const formData = new FormData();
-    formData.append('jobType', 'GENERIC_IMPORT');
-    formData.append('file', zipBlob, filename);
+    // Construct multipart/form-data manually (service workers don't have FormData)
+    const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substr(2);
+    const zipArrayBuffer = await zipBlob.arrayBuffer();
+    const zipArray = new Uint8Array(zipArrayBuffer);
+
+    let body = '';
+    body += `--${boundary}\r\n`;
+    body += 'Content-Disposition: form-data; name="jobType"\r\n\r\n';
+    body += 'GENERIC_IMPORT\r\n';
+    body += `--${boundary}\r\n`;
+    body += `Content-Disposition: form-data; name="file"; filename="${filename}"\r\n`;
+    body += 'Content-Type: application/zip\r\n\r\n';
+
+    const bodyStart = new TextEncoder().encode(body);
+    const bodyEnd = new TextEncoder().encode(`\r\n--${boundary}--\r\n`);
+
+    const finalBody = new Uint8Array(bodyStart.length + zipArray.length + bodyEnd.length);
+    finalBody.set(bodyStart);
+    finalBody.set(zipArray, bodyStart.length);
+    finalBody.set(bodyEnd, bodyStart.length + zipArray.length);
 
     const uploadResponse = await fetch(logikUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Accept': 'application/json',
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
       },
-      body: formData,
+      body: finalBody,
     });
 
     if (!uploadResponse.ok) {
