@@ -955,6 +955,23 @@ function getStyles() {
     .logik-vc-grid-variable {
       width: 18%;
       min-width: 120px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logik-vc-copy-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px 6px;
+      opacity: 1;
+      transition: opacity 0.2s;
+      flex-shrink: 0;
+      margin-left: 4px;
+    }
+    .logik-vc-copy-btn:hover {
+      opacity: 0.7;
     }
     .logik-vc-grid-description {
       width: 25%;
@@ -2562,7 +2579,7 @@ async function loadRules() {
 
         return `
           <tr>
-            <td class="logik-vc-grid-checkbox"><input type="checkbox"></td>
+            <td class="logik-vc-grid-checkbox"><button class="logik-vc-copy-btn" data-text="${rule.variableName || ''}" title="Copy to clipboard">📋</button></td>
             <td class="logik-vc-grid-name">${rule.name || ''}</td>
             <td class="logik-vc-grid-variable">${rule.variableName || ''}</td>
             <td class="logik-vc-grid-description">${rule.description || ''}</td>
@@ -2625,7 +2642,7 @@ function populateRulesGrid(rulesToDisplay) {
 
       return `
         <tr>
-          <td class="logik-vc-grid-checkbox"><input type="checkbox"></td>
+          <td class="logik-vc-grid-checkbox"><button class="logik-vc-copy-btn" data-text="${rule.variableName || ''}" title="Copy to clipboard">📋</button></td>
           <td class="logik-vc-grid-name">${rule.name || ''}</td>
           <td class="logik-vc-grid-variable">${rule.variableName || ''}</td>
           <td class="logik-vc-grid-description">${rule.description || ''}</td>
@@ -2635,6 +2652,20 @@ function populateRulesGrid(rulesToDisplay) {
       `;
     })
     .join('');
+
+  // Set up copy button listeners
+  gridBodyEl.addEventListener('click', (e) => {
+    if (e.target.classList.contains('logik-vc-copy-btn')) {
+      const text = e.target.dataset.text;
+      navigator.clipboard.writeText(text).then(() => {
+        const originalText = e.target.textContent;
+        e.target.textContent = '✓';
+        setTimeout(() => {
+          e.target.textContent = originalText;
+        }, 1500);
+      });
+    }
+  });
 }
 
 function setupRulesFilters() {
