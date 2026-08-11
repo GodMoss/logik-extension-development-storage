@@ -18,24 +18,24 @@ const THEMES = {
   configurator: {
     id: 'configurator',
     name: 'Configurator (Blueprint)',
-    description: 'Light purple with blue accents for blueprint configurator pages',
+    description: 'Light cyan/blue with blue accents for blueprint configurator pages',
     detector: () => !isOnTransactionPage() && !isOnTablesPage() && !isOnBlueprintListPage(),
     colors: {
-      primary: '#7c3aed',
-      primaryLight: '#3b82f6',
-      background: 'rgba(224, 204, 255, 0.85)',
-      border: 'rgba(124, 58, 237, 0.4)',
-      borderHover: 'rgba(124, 58, 237, 0.6)',
-      text: '#7c3aed',
-      textLight: '#999',
-      buttonBg: 'linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%)',
-      buttonBgHover: 'linear-gradient(135deg, #6d28d9 0%, #2563eb 100%)',
-      tableRowBg: 'rgba(237, 229, 255, 0.7)',
-      tableRowHover: 'rgba(220, 204, 255, 0.8)',
-      headerBg: 'rgba(220, 204, 255, 0.8)',
-      headerText: '#3b82f6',
-      modalBg: 'rgba(224, 204, 255, 0.95)',
-      modalBorder: 'rgba(124, 58, 237, 0.3)',
+      primary: '#0369a1',
+      primaryLight: '#0284c7',
+      background: 'rgba(206, 250, 254, 0.85)',
+      border: 'rgba(3, 105, 161, 0.3)',
+      borderHover: 'rgba(3, 105, 161, 0.5)',
+      text: '#0369a1',
+      textLight: '#666',
+      buttonBg: 'linear-gradient(135deg, #0369a1 0%, #0284c7 100%)',
+      buttonBgHover: 'linear-gradient(135deg, #0c4a6e 0%, #0c6ba6 100%)',
+      tableRowBg: 'rgba(230, 248, 255, 0.7)',
+      tableRowHover: 'rgba(206, 250, 254, 0.8)',
+      headerBg: 'rgba(206, 250, 254, 0.8)',
+      headerText: '#0284c7',
+      modalBg: 'rgba(206, 250, 254, 0.95)',
+      modalBorder: 'rgba(3, 105, 161, 0.3)',
       backdropFilter: 'blur(10px)'
     }
   },
@@ -1199,22 +1199,22 @@ function getStyles() {
       cursor: pointer;
     }
 
-    /* Configurator Theme - Light Purple Background with Blue Accents */
+    /* Configurator Theme - Light Cyan/Blue Background with Blue Accents */
     .logik-vc-panel.logik-vc-configurator-theme {
-      background: rgba(224, 204, 255, 0.85) !important;
-      border-color: rgba(124, 58, 237, 0.4) !important;
+      background: rgba(206, 250, 254, 0.85) !important;
+      border-color: rgba(3, 105, 161, 0.3) !important;
       backdrop-filter: blur(10px) !important;
       -webkit-backdrop-filter: blur(10px) !important;
     }
 
     .logik-vc-panel.logik-vc-configurator-theme .logik-vc-close,
     .logik-vc-panel.logik-vc-configurator-theme .logik-vc-collapse-arrow {
-      color: #3b82f6 !important;
-      border-color: rgba(99, 102, 241, 0.5) !important;
+      color: #0284c7 !important;
+      border-color: rgba(3, 105, 161, 0.3) !important;
     }
 
     .logik-vc-panel.logik-vc-configurator-theme h2 {
-      background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%) !important;
+      background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%) !important;
       -webkit-background-clip: text !important;
       -webkit-text-fill-color: transparent !important;
     }
@@ -1222,46 +1222,46 @@ function getStyles() {
     .logik-vc-panel.logik-vc-configurator-theme .logik-vc-tab-btn,
     .logik-vc-panel.logik-vc-configurator-theme .logik-vc-subtab-btn {
       color: #666 !important;
-      border-bottom-color: rgba(124, 58, 237, 0.2) !important;
+      border-bottom-color: rgba(3, 105, 161, 0.2) !important;
     }
 
     .logik-vc-panel.logik-vc-configurator-theme .logik-vc-tab-btn.logik-vc-tab-active,
     .logik-vc-panel.logik-vc-configurator-theme .logik-vc-subtab-btn.logik-vc-subtab-active {
-      color: #3b82f6 !important;
-      border-bottom-color: #3b82f6 !important;
+      color: #0284c7 !important;
+      border-bottom-color: #0284c7 !important;
     }
 
     .logik-vc-panel.logik-vc-configurator-theme input,
     .logik-vc-panel.logik-vc-configurator-theme textarea {
       background: rgba(255, 255, 255, 0.9) !important;
       color: #333 !important;
-      border-color: rgba(124, 58, 237, 0.3) !important;
+      border-color: rgba(3, 105, 161, 0.3) !important;
     }
 
     .logik-vc-panel.logik-vc-configurator-theme input:focus,
     .logik-vc-panel.logik-vc-configurator-theme textarea:focus {
-      border-color: #3b82f6 !important;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+      border-color: #0284c7 !important;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1) !important;
     }
 
     .logik-vc-panel.logik-vc-configurator-theme table thead th {
-      color: #3b82f6 !important;
-      border-bottom-color: rgba(124, 58, 237, 0.3) !important;
-      background: rgba(237, 229, 255, 0.5) !important;
+      color: #0284c7 !important;
+      border-bottom-color: rgba(3, 105, 161, 0.3) !important;
+      background: rgba(230, 248, 255, 0.5) !important;
     }
 
     .logik-vc-panel.logik-vc-configurator-theme .logik-vc-button {
-      background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%) !important;
+      background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%) !important;
       color: #fff !important;
     }
 
     .logik-vc-panel.logik-vc-configurator-theme .logik-vc-button:hover {
-      background: linear-gradient(135deg, #6d28d9 0%, #2563eb 100%) !important;
+      background: linear-gradient(135deg, #0c4a6e 0%, #0c6ba6 100%) !important;
     }
 
     .logik-vc-panel.logik-vc-configurator-theme table tbody tr {
-      background: rgba(237, 229, 255, 0.7) !important;
-      border-bottom-color: rgba(124, 58, 237, 0.2) !important;
+      background: rgba(230, 248, 255, 0.7) !important;
+      border-bottom-color: rgba(3, 105, 161, 0.2) !important;
     }
 
     .logik-vc-panel.logik-vc-configurator-theme table tbody tr,
@@ -1270,7 +1270,7 @@ function getStyles() {
     }
 
     .logik-vc-panel.logik-vc-configurator-theme table tbody tr:hover {
-      background: rgba(220, 204, 255, 0.8) !important;
+      background: rgba(206, 250, 254, 0.8) !important;
     }
 
     .logik-vc-panel.logik-vc-configurator-theme .logik-vc-grid-name,
@@ -1282,9 +1282,9 @@ function getStyles() {
     }
 
     .logik-vc-panel.logik-vc-configurator-theme .logik-vc-rules-category-header {
-      background: rgba(220, 204, 255, 0.5) !important;
-      border-bottom-color: rgba(124, 58, 237, 0.3) !important;
-      color: #3b82f6 !important;
+      background: rgba(206, 250, 254, 0.5) !important;
+      border-bottom-color: rgba(3, 105, 161, 0.3) !important;
+      color: #0284c7 !important;
     }
 
     /* Transaction Theme - Mint Background with Green Accents */
