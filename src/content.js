@@ -17,49 +17,73 @@ console.log('[Content Script] Logik Blueprint VC loaded');
 const THEMES = {
   configurator: {
     id: 'configurator',
-    name: 'Configurator (Default)',
-    description: 'Red/Pink theme for blueprint configurator pages',
-    detector: () => !isOnTransactionPage() && !isOnBlueprintListPage(),
+    name: 'Configurator (Blueprint)',
+    description: 'Purple with blue accents for blueprint configurator pages',
+    detector: () => !isOnTransactionPage() && !isOnTablesPage() && !isOnBlueprintListPage(),
     colors: {
-      primary: '#d63031',
-      primaryLight: '#e84393',
-      background: 'rgba(255, 20, 20, 0.1)',
-      border: 'rgba(255, 107, 107, 0.5)',
-      borderHover: 'rgba(255, 107, 107, 0.7)',
-      text: '#d63031',
+      primary: '#7c3aed',
+      primaryLight: '#3b82f6',
+      background: 'rgba(124, 58, 237, 0.1)',
+      border: 'rgba(99, 102, 241, 0.5)',
+      borderHover: 'rgba(99, 102, 241, 0.7)',
+      text: '#7c3aed',
       textLight: '#999',
-      buttonBg: 'linear-gradient(135deg, #d63031 0%, #e84393 100%)',
-      buttonBgHover: 'linear-gradient(135deg, #c41e1e 0%, #d63384 100%)',
-      tableRowBg: 'rgba(255, 240, 240, 0.8)',
-      tableRowHover: 'rgba(255, 220, 220, 0.9)',
-      headerBg: 'rgba(255, 240, 240, 1)',
-      headerText: '#e84393',
-      modalBg: 'rgba(40, 20, 20, 0.95)',
-      modalBorder: 'rgba(214, 48, 49, 0.3)',
+      buttonBg: 'linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%)',
+      buttonBgHover: 'linear-gradient(135deg, #6d28d9 0%, #2563eb 100%)',
+      tableRowBg: 'rgba(224, 215, 255, 0.5)',
+      tableRowHover: 'rgba(196, 181, 253, 0.6)',
+      headerBg: 'rgba(224, 215, 255, 0.7)',
+      headerText: '#3b82f6',
+      modalBg: 'rgba(55, 30, 100, 0.95)',
+      modalBorder: 'rgba(124, 58, 237, 0.3)',
       backdropFilter: 'blur(10px)'
     }
   },
   transaction: {
     id: 'transaction',
     name: 'Transaction (PQ Admin)',
-    description: 'Black/Orange spooky theme for transaction and pricing quotation admin pages',
+    description: 'Mint with green accents for transaction and pricing quotation admin pages',
     detector: () => isOnTransactionPage(),
     colors: {
-      primary: '#ff8c00',
-      primaryLight: '#ffa500',
-      background: 'rgba(20, 20, 20, 0.7)',
-      border: 'rgba(255, 140, 0, 0.5)',
-      borderHover: 'rgba(255, 140, 0, 0.7)',
-      text: '#ff8c00',
+      primary: '#10b981',
+      primaryLight: '#14b8a6',
+      background: 'rgba(16, 185, 129, 0.15)',
+      border: 'rgba(16, 185, 129, 0.5)',
+      borderHover: 'rgba(16, 185, 129, 0.7)',
+      text: '#10b981',
       textLight: '#999',
-      buttonBg: 'linear-gradient(135deg, #ff8c00 0%, #ffa500 100%)',
-      buttonBgHover: 'linear-gradient(135deg, #ff7700 0%, #ff9400 100%)',
-      tableRowBg: 'rgba(40, 40, 40, 0.6)',
-      tableRowHover: 'rgba(50, 50, 50, 0.8)',
-      headerBg: 'rgba(30, 30, 30, 0.9)',
-      headerText: '#ff8c00',
-      modalBg: 'rgba(40, 40, 40, 0.95)',
-      modalBorder: 'rgba(255, 140, 0, 0.3)',
+      buttonBg: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)',
+      buttonBgHover: 'linear-gradient(135deg, #059669 0%, #0d9488 100%)',
+      tableRowBg: 'rgba(204, 250, 225, 0.5)',
+      tableRowHover: 'rgba(167, 243, 208, 0.6)',
+      headerBg: 'rgba(204, 250, 225, 0.7)',
+      headerText: '#14b8a6',
+      modalBg: 'rgba(15, 75, 55, 0.95)',
+      modalBorder: 'rgba(16, 185, 129, 0.3)',
+      backdropFilter: 'blur(10px)'
+    }
+  },
+  tables: {
+    id: 'tables',
+    name: 'Tables (Data Admin)',
+    description: 'Pink with red accents for table management and export pages',
+    detector: () => isOnTablesPage(),
+    colors: {
+      primary: '#ec4899',
+      primaryLight: '#dc2626',
+      background: 'rgba(236, 72, 153, 0.1)',
+      border: 'rgba(220, 38, 38, 0.5)',
+      borderHover: 'rgba(220, 38, 38, 0.7)',
+      text: '#ec4899',
+      textLight: '#999',
+      buttonBg: 'linear-gradient(135deg, #ec4899 0%, #dc2626 100%)',
+      buttonBgHover: 'linear-gradient(135deg, #db2777 0%, #b91c1c 100%)',
+      tableRowBg: 'rgba(254, 226, 226, 0.6)',
+      tableRowHover: 'rgba(254, 205, 211, 0.7)',
+      headerBg: 'rgba(254, 226, 226, 0.8)',
+      headerText: '#dc2626',
+      modalBg: 'rgba(70, 20, 30, 0.95)',
+      modalBorder: 'rgba(236, 72, 153, 0.3)',
       backdropFilter: 'blur(10px)'
     }
   }
@@ -130,6 +154,12 @@ function isOnTransactionPage() {
   // Check if URL contains /transaction/ (PQ/transaction admin pages)
   const path = window.location.pathname;
   return path.includes('/transaction/');
+}
+
+function isOnTablesPage() {
+  // Check if URL contains /io/tables or /tables (tables admin pages)
+  const path = window.location.pathname;
+  return path.includes('/io/tables') || path.includes('/tables');
 }
 
 let currentPageType = null;
@@ -1169,118 +1199,151 @@ function getStyles() {
       cursor: pointer;
     }
 
-    /* Transaction Page Theme - Black Background with Orange Accents */
+    /* Configurator Theme - Purple Background with Blue Accents */
+    .logik-vc-panel.logik-vc-configurator-theme {
+      background: rgba(124, 58, 237, 0.7) !important;
+      border-color: rgba(99, 102, 241, 0.5) !important;
+      backdrop-filter: blur(10px) !important;
+      -webkit-backdrop-filter: blur(10px) !important;
+    }
+
+    .logik-vc-panel.logik-vc-configurator-theme .logik-vc-close,
+    .logik-vc-panel.logik-vc-configurator-theme .logik-vc-collapse-arrow {
+      color: #3b82f6 !important;
+      border-color: rgba(99, 102, 241, 0.5) !important;
+    }
+
+    .logik-vc-panel.logik-vc-configurator-theme h2 {
+      background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%) !important;
+      -webkit-background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+    }
+
+    .logik-vc-panel.logik-vc-configurator-theme .logik-vc-tab-btn,
+    .logik-vc-panel.logik-vc-configurator-theme .logik-vc-subtab-btn {
+      color: #666 !important;
+    }
+
+    .logik-vc-panel.logik-vc-configurator-theme .logik-vc-tab-btn.logik-vc-tab-active,
+    .logik-vc-panel.logik-vc-configurator-theme .logik-vc-subtab-btn.logik-vc-subtab-active {
+      color: #3b82f6 !important;
+      border-bottom-color: #3b82f6 !important;
+    }
+
+    .logik-vc-panel.logik-vc-configurator-theme .logik-vc-button {
+      background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%) !important;
+      color: #fff !important;
+    }
+
+    .logik-vc-panel.logik-vc-configurator-theme .logik-vc-button:hover {
+      background: linear-gradient(135deg, #6d28d9 0%, #2563eb 100%) !important;
+    }
+
+    .logik-vc-panel.logik-vc-configurator-theme table tbody tr {
+      background: rgba(224, 215, 255, 0.5) !important;
+      border-bottom-color: rgba(99, 102, 241, 0.15) !important;
+    }
+
+    .logik-vc-panel.logik-vc-configurator-theme table tbody tr:hover {
+      background: rgba(196, 181, 253, 0.6) !important;
+    }
+
+    /* Transaction Theme - Mint Background with Green Accents */
     .logik-vc-panel.logik-vc-transaction-theme {
-      background: rgba(20, 20, 20, 0.7) !important;
-      border-color: rgba(255, 140, 0, 0.5) !important;
+      background: rgba(16, 185, 129, 0.15) !important;
+      border-color: rgba(16, 185, 129, 0.5) !important;
       backdrop-filter: blur(10px) !important;
       -webkit-backdrop-filter: blur(10px) !important;
     }
 
     .logik-vc-panel.logik-vc-transaction-theme .logik-vc-close,
     .logik-vc-panel.logik-vc-transaction-theme .logik-vc-collapse-arrow {
-      color: #ff8c00 !important;
-      border-color: rgba(255, 140, 0, 0.5) !important;
+      color: #10b981 !important;
+      border-color: rgba(16, 185, 129, 0.5) !important;
     }
 
     .logik-vc-panel.logik-vc-transaction-theme h2 {
-      background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%) !important;
+      background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%) !important;
       -webkit-background-clip: text !important;
       -webkit-text-fill-color: transparent !important;
     }
 
     .logik-vc-panel.logik-vc-transaction-theme .logik-vc-tab-btn,
     .logik-vc-panel.logik-vc-transaction-theme .logik-vc-subtab-btn {
-      color: #999 !important;
+      color: #666 !important;
     }
 
     .logik-vc-panel.logik-vc-transaction-theme .logik-vc-tab-btn.logik-vc-tab-active,
     .logik-vc-panel.logik-vc-transaction-theme .logik-vc-subtab-btn.logik-vc-subtab-active {
-      color: #ff8c00 !important;
-      border-bottom-color: #ff8c00 !important;
+      color: #10b981 !important;
+      border-bottom-color: #10b981 !important;
     }
 
     .logik-vc-panel.logik-vc-transaction-theme .logik-vc-button {
-      background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%) !important;
-      color: #000 !important;
+      background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%) !important;
+      color: #fff !important;
     }
 
     .logik-vc-panel.logik-vc-transaction-theme .logik-vc-button:hover {
-      background: linear-gradient(135deg, #ff7700 0%, #ff9400 100%) !important;
-    }
-
-    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-refresh-btn:hover {
-      background: rgba(255, 140, 0, 0.2) !important;
-    }
-
-    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-grid-name,
-    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-grid-variable,
-    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-grid-description,
-    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-grid-actions,
-    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-grid-modified {
-      color: #fff !important;
-    }
-
-    .logik-vc-panel.logik-vc-transaction-theme table thead th {
-      color: #ff8c00 !important;
-      border-bottom-color: rgba(255, 140, 0, 0.3) !important;
-    }
-
-    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-rules-category-header {
-      background: rgba(255, 140, 0, 0.15) !important;
-      border-bottom-color: rgba(255, 140, 0, 0.3) !important;
-      color: #ff8c00 !important;
-    }
-
-    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-modal-backdrop {
-      background: rgba(20, 20, 20, 0.7) !important;
-    }
-
-    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-modal-content {
-      background: rgba(40, 40, 40, 0.95) !important;
-      border-color: rgba(255, 140, 0, 0.3) !important;
-      color: #fff !important;
-    }
-
-    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-modal-content h3 {
-      color: #ff8c00 !important;
-    }
-
-    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-modal-btn-confirm {
-      background: linear-gradient(135deg, #ff8c00 0%, #ffa500 100%) !important;
-      color: #000 !important;
-    }
-
-    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-modal-btn-confirm:hover {
-      background: linear-gradient(135deg, #ff7700 0%, #ff9400 100%) !important;
-    }
-
-    .logik-vc-panel.logik-vc-transaction-theme input,
-    .logik-vc-panel.logik-vc-transaction-theme textarea {
-      background: rgba(255, 255, 255, 0.9) !important;
-      color: #000 !important;
-      border-color: rgba(255, 140, 0, 0.2) !important;
-    }
-
-    .logik-vc-panel.logik-vc-transaction-theme .logik-vc-status {
-      color: #ff8c00 !important;
-    }
-
-    .logik-vc-panel.logik-vc-transaction-theme table {
-      background: rgba(30, 30, 30, 0.8) !important;
+      background: linear-gradient(135deg, #059669 0%, #0d9488 100%) !important;
     }
 
     .logik-vc-panel.logik-vc-transaction-theme table tbody tr {
-      background: rgba(40, 40, 40, 0.6) !important;
-      border-bottom-color: rgba(255, 140, 0, 0.15) !important;
+      background: rgba(204, 250, 225, 0.5) !important;
+      border-bottom-color: rgba(16, 185, 129, 0.15) !important;
     }
 
     .logik-vc-panel.logik-vc-transaction-theme table tbody tr:hover {
-      background: rgba(50, 50, 50, 0.8) !important;
+      background: rgba(167, 243, 208, 0.6) !important;
     }
 
-    .logik-vc-panel.logik-vc-transaction-theme table thead {
-      background: rgba(30, 30, 30, 0.9) !important;
+    /* Tables Theme - Pink Background with Red Accents */
+    .logik-vc-panel.logik-vc-tables-theme {
+      background: rgba(236, 72, 153, 0.15) !important;
+      border-color: rgba(220, 38, 38, 0.5) !important;
+      backdrop-filter: blur(10px) !important;
+      -webkit-backdrop-filter: blur(10px) !important;
+    }
+
+    .logik-vc-panel.logik-vc-tables-theme .logik-vc-close,
+    .logik-vc-panel.logik-vc-tables-theme .logik-vc-collapse-arrow {
+      color: #dc2626 !important;
+      border-color: rgba(220, 38, 38, 0.5) !important;
+    }
+
+    .logik-vc-panel.logik-vc-tables-theme h2 {
+      background: linear-gradient(135deg, #ec4899 0%, #dc2626 100%) !important;
+      -webkit-background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+    }
+
+    .logik-vc-panel.logik-vc-tables-theme .logik-vc-tab-btn,
+    .logik-vc-panel.logik-vc-tables-theme .logik-vc-subtab-btn {
+      color: #666 !important;
+    }
+
+    .logik-vc-panel.logik-vc-tables-theme .logik-vc-tab-btn.logik-vc-tab-active,
+    .logik-vc-panel.logik-vc-tables-theme .logik-vc-subtab-btn.logik-vc-subtab-active {
+      color: #dc2626 !important;
+      border-bottom-color: #dc2626 !important;
+    }
+
+    .logik-vc-panel.logik-vc-tables-theme .logik-vc-button {
+      background: linear-gradient(135deg, #ec4899 0%, #dc2626 100%) !important;
+      color: #fff !important;
+    }
+
+    .logik-vc-panel.logik-vc-tables-theme .logik-vc-button:hover {
+      background: linear-gradient(135deg, #db2777 0%, #b91c1c 100%) !important;
+    }
+
+    .logik-vc-panel.logik-vc-tables-theme table tbody tr {
+      background: rgba(254, 226, 226, 0.6) !important;
+      border-bottom-color: rgba(220, 38, 38, 0.15) !important;
+    }
+
+    .logik-vc-panel.logik-vc-tables-theme table tbody tr:hover {
+      background: rgba(254, 205, 211, 0.7) !important;
     }
   `;
 }
