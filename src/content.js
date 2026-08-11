@@ -193,6 +193,7 @@ function getPanelHTML() {
     return `
       <button id="logik-blueprint-vc-toggle" class="logik-vc-toggle" title="Admin Masterlord" style="background-image: url('${iconUrl}')"></button>
       <div id="logik-blueprint-vc-panel" class="logik-vc-panel">
+        <button id="logik-vc-collapse-arrow" class="logik-vc-collapse-arrow" title="Expand/Collapse">◄</button>
         <div class="logik-vc-header">
           <h2>Admin Masterlord</h2>
           <button id="logik-vc-close" class="logik-vc-close">&times;</button>
@@ -402,6 +403,38 @@ function getStyles() {
       overflow: visible;
     }
     .logik-vc-panel.open { right: 0; }
+    .logik-vc-panel.expanded {
+      right: 0;
+      width: 50vw;
+    }
+    .logik-vc-collapse-arrow {
+      position: absolute;
+      left: -42px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 40px;
+      height: 50px;
+      background: rgba(255, 240, 240, 1);
+      border: 2px solid rgba(255, 107, 107, 0.5);
+      border-radius: 20px;
+      color: #d63031;
+      font-size: 20px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      z-index: 9999;
+      padding: 0;
+    }
+    .logik-vc-panel.open .logik-vc-collapse-arrow {
+      display: flex;
+    }
+    .logik-vc-collapse-arrow:hover {
+      background: rgba(255, 240, 240, 1);
+      border-color: rgba(255, 107, 107, 0.7);
+      color: #e84393;
+    }
       font-size: 22px;
       font-weight: 700;
       transition: all 0.2s ease;
@@ -1096,6 +1129,23 @@ function setupPanelListeners() {
 
   // Handle Tables tab visibility based on URL
   handleTablesTabVisibility();
+
+  // Collapse arrow handler - available on all tabs
+  const collapseArrow = panel.querySelector('#logik-vc-collapse-arrow');
+  if (collapseArrow) {
+    collapseArrow.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isExpanded = panel.classList.contains('expanded');
+
+      if (isExpanded) {
+        panel.classList.remove('expanded');
+        collapseArrow.textContent = '◄';
+      } else {
+        panel.classList.add('expanded');
+        collapseArrow.textContent = '►';
+      }
+    });
+  }
 }
 
 function handleTablesTabVisibility() {
