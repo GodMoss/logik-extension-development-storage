@@ -2484,25 +2484,24 @@ function showDeleteConfirmation(filename) {
 
     // Create modal content
     const content = document.createElement('div');
-    content.style.cssText = `
-      background: linear-gradient(135deg, rgba(255, 240, 240, 0.95) 0%, rgba(255, 245, 240, 0.95) 100%);
-      backdrop-filter: blur(20px);
-      border: 2px solid rgba(255, 107, 107, 0.3);
-      border-radius: 16px;
-      padding: 32px;
-      max-width: 400px;
-      box-shadow: 0 20px 60px rgba(255, 107, 107, 0.25);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    `;
 
     // Get current theme for colors
     const theme = getCurrentTheme();
     const primaryColor = theme.colors.primary;
     const primaryLight = theme.colors.primaryLight;
     const bgColor = theme.colors.background;
+    const borderColor = theme.colors.border;
 
-    // Update modal background to match theme
-    modal.style.background = bgColor;
+    content.style.cssText = `
+      background: ${bgColor};
+      backdrop-filter: blur(20px);
+      border: 2px solid ${borderColor};
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
 
     content.innerHTML = `
       <h2 style="
