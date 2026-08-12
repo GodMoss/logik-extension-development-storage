@@ -423,6 +423,12 @@ function getPanelHTML() {
                     class="logik-vc-filter-input"
                     placeholder="Filter by Target Field..."
                   >
+                  <input
+                    type="text"
+                    id="logik-vc-aggregate-field-input"
+                    class="logik-vc-filter-input"
+                    placeholder="Find Rules with Aggregate..."
+                  >
                   <div class="logik-vc-filter-dropdown">
                     <button id="logik-vc-action-filter-btn" class="logik-vc-filter-btn">Action Type ▼</button>
                     <div id="logik-vc-action-filter-menu" class="logik-vc-filter-menu" style="display: none;">
@@ -3362,6 +3368,7 @@ function populateTransactionRulesGrid(rulesToDisplay) {
 function setupRulesFilters() {
   const searchInput = document.getElementById('logik-vc-search-input');
   const targetFieldInput = document.getElementById('logik-vc-target-field-input');
+  const aggregateFieldInput = document.getElementById('logik-vc-aggregate-field-input');
   const actionFilterBtn = document.getElementById('logik-vc-action-filter-btn');
   const actionFilterMenu = document.getElementById('logik-vc-action-filter-menu');
   const actionCheckboxes = document.querySelectorAll('.logik-vc-action-checkbox');
@@ -3389,6 +3396,13 @@ function setupRulesFilters() {
     targetFieldTimeout = setTimeout(applyRulesFilters, 500);
   });
 
+  // Filter on aggregate field input (with debounce)
+  let aggregateFieldTimeout;
+  aggregateFieldInput.addEventListener('input', () => {
+    clearTimeout(aggregateFieldTimeout);
+    aggregateFieldTimeout = setTimeout(applyRulesFilters, 500);
+  });
+
   // Filter on action checkbox change
   actionCheckboxes.forEach(checkbox => {
     checkbox.addEventListener('change', applyRulesFilters);
@@ -3398,14 +3412,16 @@ function setupRulesFilters() {
 async function applyRulesFilters() {
   const searchInput = document.getElementById('logik-vc-search-input');
   const targetFieldInput = document.getElementById('logik-vc-target-field-input');
+  const aggregateFieldInput = document.getElementById('logik-vc-aggregate-field-input');
   const statusEl = document.getElementById('logik-vc-rules-status');
   const actionCheckboxes = document.querySelectorAll('.logik-vc-action-checkbox:checked');
 
   const searchTerm = searchInput.value.toLowerCase();
   const targetField = targetFieldInput.value.toLowerCase();
+  const aggregateField = aggregateFieldInput.value.toLowerCase();
   const selectedActions = Array.from(actionCheckboxes).map(cb => cb.value);
 
-  console.log('[Content Script] Applying filters:', { searchTerm, selectedActions: Array.from(actionCheckboxes).map(cb => cb.value), targetField });
+  console.log('[Content Script] Applying filters:', { searchTerm, selectedActions: Array.from(actionCheckboxes).map(cb => cb.value), targetField, aggregateField });
 
   // Filter rules
   let filteredRules = window.logikAllRules.filter(rule => {
@@ -3437,8 +3453,14 @@ async function applyRulesFilters() {
     filteredRules = await filterByTargetField(filteredRules, targetField);
   }
 
+  // Aggregate field filter - searches rule scripts
+  if (aggregateField) {
+    statusEl.textContent = 'Searching rule scripts for aggregate...';
+    filteredRules = await filterByAggregate(filteredRules, aggregateField);
+  }
+
   // Update status with filtered count
-  if (searchTerm || selectedActions.length > 0 || targetField) {
+  if (searchTerm || selectedActions.length > 0 || targetField || aggregateField) {
     statusEl.textContent = `Showing ${filteredRules.length} of ${window.logikRuleCount} rule(s)`;
   } else {
     statusEl.textContent = `Loaded ${window.logikRuleCount} active rule(s)`;
@@ -3513,6 +3535,77 @@ async function filterByTargetField(rules, targetField) {
     });
 
     return matches;
+  });
+}
+
+async function filterByAggregate(rules, aggregateField) {
+  // Initialize cache for rule details
+  if (!window.logikRuleDetailsCache) {
+    window.logikRuleDetailsCache = {};
+  }
+
+  // Get credentials (auto-detects environment)
+  const apiKey = await getLogikApiKeyForCurrentEnv();
+  if (!apiKey) return rules;
+
+  // Extract tenant and sector
+  const hostname = new URL(window.location.href).hostname;
+  const parts = hostname.split('.');
+  const tenant = parts[0];
+  const sector = parts[1];
+
+  // Fetch rule details for rules we don't have cached
+  const rulesToFetch = rules.filter(rule => !window.logikRuleDetailsCache[rule.variableName]);
+
+  if (rulesToFetch.length > 0) {
+    const fetchPromises = rulesToFetch.map(rule =>
+      fetch(`https://${tenant}.${sector}.logik.io/api/admin/v3/rules/${rule.variableName}`, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Accept': 'application/json'
+        }
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(details => {
+          if (details) {
+            window.logikRuleDetailsCache[rule.variableName] = details;
+          }
+          return details;
+        })
+        .catch(e => {
+          console.error('Failed to fetch rule details:', e);
+          return null;
+        })
+    );
+
+    await Promise.all(fetchPromises);
+  }
+
+  // Filter rules by searching for aggregate field in scripts
+  const searchTerm = aggregateField.toLowerCase();
+  return rules.filter(rule => {
+    const details = window.logikRuleDetailsCache[rule.variableName];
+    if (!details) return false;
+
+    // Search in rule script content
+    const scriptContent = details.script ? JSON.stringify(details.script).toLowerCase() : '';
+    const matchesScript = scriptContent.includes(searchTerm);
+
+    if (matchesScript) {
+      console.log('[Content Script] Found aggregate in rule script:', rule.variableName, '- aggregate:', aggregateField);
+    }
+
+    // Also search in actions for any references
+    const matchesActions = details.actions && details.actions.some(action => {
+      const actionStr = JSON.stringify(action).toLowerCase();
+      return actionStr.includes(searchTerm);
+    });
+
+    if (matchesActions) {
+      console.log('[Content Script] Found aggregate in rule actions:', rule.variableName, '- aggregate:', aggregateField);
+    }
+
+    return matchesScript || matchesActions;
   });
 }
 
