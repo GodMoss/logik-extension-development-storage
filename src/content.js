@@ -3607,16 +3607,35 @@ async function filterByConditionField(rules, conditionField) {
 
   // Filter rules by condition field
   const searchLower = conditionField.toLowerCase();
+  console.log('[Content Script] filterByConditionField - searching for:', searchLower, 'in', rules.length, 'rules');
+
   return rules.filter(rule => {
     const details = window.logikRuleDetailsCache[rule.variableName];
-    if (!details || !details.conditions) return false;
+
+    if (!details) {
+      console.log('[Content Script] No cached details for rule:', rule.variableName);
+      return false;
+    }
+
+    if (!details.conditions) {
+      console.log('[Content Script] Rule has no conditions:', rule.variableName);
+      return false;
+    }
+
+    console.log('[Content Script] Checking', details.conditions.length, 'conditions for rule:', rule.variableName);
 
     const matches = details.conditions.some(condition => {
+      console.log('[Content Script] Condition structure:', JSON.stringify(condition, null, 2));
+
       // Check lhs side only
       if (condition.lhs && condition.lhs.field === true && condition.lhs.value && Array.isArray(condition.lhs.value)) {
+        console.log('[Content Script] Checking lhs.value:', condition.lhs.value);
+
         const lhsMatch = condition.lhs.value.some(val => {
           if (!val) return false;
-          return val.toString().toLowerCase().includes(searchLower);
+          const match = val.toString().toLowerCase().includes(searchLower);
+          console.log('[Content Script] Comparing', val, 'with', searchLower, '- match:', match);
+          return match;
         });
 
         if (lhsMatch) {
@@ -3627,6 +3646,10 @@ async function filterByConditionField(rules, conditionField) {
 
       return false;
     });
+
+    if (matches) {
+      console.log('[Content Script] Rule passed condition filter:', rule.variableName);
+    }
 
     return matches;
   });
