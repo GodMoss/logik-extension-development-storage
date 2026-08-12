@@ -3539,74 +3539,94 @@ async function filterByTargetField(rules, targetField) {
 }
 
 async function filterByAggregate(rules, aggregateField) {
-  // Initialize cache for rule details
-  if (!window.logikRuleDetailsCache) {
-    window.logikRuleDetailsCache = {};
-  }
-
   // Get credentials (auto-detects environment)
   const apiKey = await getLogikApiKeyForCurrentEnv();
   if (!apiKey) return rules;
 
-  // Extract tenant and sector
+  // Extract tenant, sector, and blueprint name
   const hostname = new URL(window.location.href).hostname;
   const parts = hostname.split('.');
   const tenant = parts[0];
   const sector = parts[1];
+  const blueprintName = extractBlueprintNameFromUI();
 
-  // Fetch rule details for rules we don't have cached
-  const rulesToFetch = rules.filter(rule => !window.logikRuleDetailsCache[rule.variableName]);
+  console.log('[Content Script] Searching for aggregate:', aggregateField, 'in blueprint:', blueprintName);
 
-  if (rulesToFetch.length > 0) {
-    const fetchPromises = rulesToFetch.map(rule =>
-      fetch(`https://${tenant}.${sector}.logik.io/api/admin/v3/rules/${rule.variableName}`, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Accept': 'application/json'
-        }
-      })
-        .then(r => r.ok ? r.json() : null)
-        .then(details => {
-          if (details) {
-            window.logikRuleDetailsCache[rule.variableName] = details;
-          }
-          return details;
-        })
-        .catch(e => {
-          console.error('Failed to fetch rule details:', e);
-          return null;
-        })
-    );
-
-    await Promise.all(fetchPromises);
+  // Initialize script cache
+  if (!window.logikScriptCache) {
+    window.logikScriptCache = {};
   }
 
-  // Filter rules by searching for aggregate field in scripts
-  const searchTerm = aggregateField.toLowerCase();
-  return rules.filter(rule => {
-    const details = window.logikRuleDetailsCache[rule.variableName];
-    if (!details) return false;
+  // For each rule, get full details and fetch script if it has one
+  const rulesWithScripts = await Promise.all(
+    rules.map(async (rule) => {
+      try {
+        // Fetch full rule details
+        const ruleResponse = await fetch(
+          `https://${tenant}.${sector}.logik.io/api/admin/v3/rules/${rule.variableName}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Accept': 'application/json'
+            }
+          }
+        );
 
-    // Search in rule script content
-    const scriptContent = details.script ? JSON.stringify(details.script).toLowerCase() : '';
-    const matchesScript = scriptContent.includes(searchTerm);
+        if (!ruleResponse.ok) {
+          console.warn('[Content Script] Failed to fetch rule:', rule.variableName);
+          return { rule, hasAggregate: false };
+        }
 
-    if (matchesScript) {
-      console.log('[Content Script] Found aggregate in rule script:', rule.variableName, '- aggregate:', aggregateField);
-    }
+        const ruleDetails = await ruleResponse.json();
 
-    // Also search in actions for any references
-    const matchesActions = details.actions && details.actions.some(action => {
-      const actionStr = JSON.stringify(action).toLowerCase();
-      return actionStr.includes(searchTerm);
-    });
+        // Check if rule has a scriptId
+        if (!ruleDetails.scriptId) {
+          console.log('[Content Script] Rule has no script:', rule.variableName);
+          return { rule, hasAggregate: false };
+        }
 
-    if (matchesActions) {
-      console.log('[Content Script] Found aggregate in rule actions:', rule.variableName, '- aggregate:', aggregateField);
-    }
+        // Fetch the script content
+        let scriptContent = window.logikScriptCache[ruleDetails.scriptId];
+        if (!scriptContent) {
+          const scriptResponse = await fetch(
+            `https://${tenant}.${sector}.logik.io/api/admin/v1/scripts/${ruleDetails.scriptId}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Accept': 'application/json'
+              }
+            }
+          );
 
-    return matchesScript || matchesActions;
-  });
+          if (!scriptResponse.ok) {
+            console.warn('[Content Script] Failed to fetch script:', ruleDetails.scriptId);
+            return { rule, hasAggregate: false };
+          }
+
+          const scriptData = await scriptResponse.json();
+          scriptContent = scriptData.content || '';
+          window.logikScriptCache[ruleDetails.scriptId] = scriptContent;
+        }
+
+        // Search for aggregate field in script (exact match, case-insensitive)
+        const hasAggregate = scriptContent.toLowerCase().includes(aggregateField.toLowerCase());
+
+        if (hasAggregate) {
+          console.log('[Content Script] Found aggregate in rule script:', rule.variableName);
+        }
+
+        return { rule, hasAggregate };
+      } catch (error) {
+        console.error('[Content Script] Error processing rule:', rule.variableName, error);
+        return { rule, hasAggregate: false };
+      }
+    })
+  );
+
+  // Return only rules that have the aggregate
+  return rulesWithScripts
+    .filter(({ hasAggregate }) => hasAggregate)
+    .map(({ rule }) => rule);
 }
 
 async function scanForTables() {
