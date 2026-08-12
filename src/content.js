@@ -3617,14 +3617,17 @@ async function filterByConditionField(rules, conditionField) {
       return false;
     }
 
-    if (!details.conditions) {
+    // Conditions are nested inside condition.conditions
+    const conditions = details.condition && details.condition.conditions;
+
+    if (!conditions) {
       console.log('[Content Script] Rule has no conditions:', rule.variableName);
       return false;
     }
 
-    console.log('[Content Script] Checking', details.conditions.length, 'conditions for rule:', rule.variableName);
+    console.log('[Content Script] Checking', conditions.length, 'conditions for rule:', rule.variableName);
 
-    const matches = details.conditions.some(condition => {
+    const matches = conditions.some(condition => {
       console.log('[Content Script] Condition structure:', JSON.stringify(condition, null, 2));
 
       // Check lhs side only
