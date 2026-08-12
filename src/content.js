@@ -419,6 +419,12 @@ function getPanelHTML() {
                   >
                   <input
                     type="text"
+                    id="logik-vc-find-all-input"
+                    class="logik-vc-filter-input"
+                    placeholder="Find in All (Conditions, Target Fields, Scripts)..."
+                  >
+                  <input
+                    type="text"
                     id="logik-vc-condition-field-input"
                     class="logik-vc-filter-input"
                     placeholder="Filter by Condition Field..."
@@ -3373,6 +3379,7 @@ function populateTransactionRulesGrid(rulesToDisplay) {
 
 function setupRulesFilters() {
   const searchInput = document.getElementById('logik-vc-search-input');
+  const findAllInput = document.getElementById('logik-vc-find-all-input');
   const targetFieldInput = document.getElementById('logik-vc-target-field-input');
   const conditionFieldInput = document.getElementById('logik-vc-condition-field-input');
   const scriptSearchInput = document.getElementById('logik-vc-script-search-input');
@@ -3395,6 +3402,13 @@ function setupRulesFilters() {
 
   // Filter on search input
   searchInput.addEventListener('input', applyRulesFilters);
+
+  // Filter on find all input (with debounce)
+  let findAllTimeout;
+  findAllInput.addEventListener('input', () => {
+    clearTimeout(findAllTimeout);
+    findAllTimeout = setTimeout(applyRulesFilters, 500);
+  });
 
   // Filter on target field input (with debounce)
   let targetFieldTimeout;
@@ -3425,6 +3439,7 @@ function setupRulesFilters() {
 
 async function applyRulesFilters() {
   const searchInput = document.getElementById('logik-vc-search-input');
+  const findAllInput = document.getElementById('logik-vc-find-all-input');
   const targetFieldInput = document.getElementById('logik-vc-target-field-input');
   const conditionFieldInput = document.getElementById('logik-vc-condition-field-input');
   const scriptSearchInput = document.getElementById('logik-vc-script-search-input');
@@ -3432,12 +3447,13 @@ async function applyRulesFilters() {
   const actionCheckboxes = document.querySelectorAll('.logik-vc-action-checkbox:checked');
 
   const searchTerm = searchInput.value.toLowerCase();
+  const findAll = findAllInput.value.toLowerCase();
   const targetField = targetFieldInput.value.toLowerCase();
   const conditionField = conditionFieldInput.value.toLowerCase();
   const scriptSearch = scriptSearchInput.value.toLowerCase();
   const selectedActions = Array.from(actionCheckboxes).map(cb => cb.value);
 
-  console.log('[Content Script] Applying filters:', { searchTerm, selectedActions: Array.from(actionCheckboxes).map(cb => cb.value), targetField, conditionField, scriptSearch });
+  console.log('[Content Script] Applying filters:', { searchTerm, findAll, targetField, conditionField, scriptSearch });
 
   // Filter rules
   let filteredRules = window.logikAllRules.filter(rule => {
@@ -3483,8 +3499,16 @@ async function applyRulesFilters() {
     console.log('[Content Script] Script search returned', filteredRules.length, 'matching rules');
   }
 
+  // Find all filter - searches conditions, target fields, and scripts
+  if (findAll) {
+    console.log('[Content Script] Starting find all search with', filteredRules.length, 'rules');
+    statusEl.textContent = 'Searching all rule elements...';
+    filteredRules = await findAllFilter(filteredRules, findAll);
+    console.log('[Content Script] Find all search returned', filteredRules.length, 'matching rules');
+  }
+
   // Update status with filtered count
-  if (searchTerm || selectedActions.length > 0 || targetField || conditionField || scriptSearch) {
+  if (searchTerm || selectedActions.length > 0 || targetField || conditionField || scriptSearch || findAll) {
     statusEl.textContent = `Showing ${filteredRules.length} of ${window.logikRuleCount} rule(s)`;
   } else {
     statusEl.textContent = `Loaded ${window.logikRuleCount} active rule(s)`;
@@ -3783,6 +3807,148 @@ async function searchRuleScripts(rules, searchText) {
 
   // Return only rules that have the match
   return rulesWithScripts
+    .filter(({ hasMatch }) => hasMatch)
+    .map(({ rule }) => rule);
+}
+
+async function findAllFilter(rules, searchText) {
+  // Get credentials (auto-detects environment)
+  const apiKey = await getLogikApiKeyForCurrentEnv();
+  if (!apiKey) return rules;
+
+  // Extract tenant and sector
+  const hostname = new URL(window.location.href).hostname;
+  const parts = hostname.split('.');
+  const tenant = parts[0];
+  const sector = parts[1];
+
+  // Initialize caches
+  if (!window.logikRuleDetailsCache) {
+    window.logikRuleDetailsCache = {};
+  }
+  if (!window.logikScriptCache) {
+    window.logikScriptCache = {};
+  }
+
+  // Fetch rule details for rules we don't have cached
+  const rulesToFetch = rules.filter(rule => !window.logikRuleDetailsCache[rule.variableName]);
+
+  if (rulesToFetch.length > 0) {
+    const fetchPromises = rulesToFetch.map(rule =>
+      fetch(`https://${tenant}.${sector}.logik.io/api/admin/v3/rules/${rule.variableName}`, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Accept': 'application/json'
+        }
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(details => {
+          if (details) {
+            window.logikRuleDetailsCache[rule.variableName] = details;
+          }
+          return details;
+        })
+        .catch(e => {
+          console.error('Failed to fetch rule details:', e);
+          return null;
+        })
+    );
+
+    await Promise.all(fetchPromises);
+  }
+
+  // Search all locations for each rule
+  const rulesWithMatches = await Promise.all(
+    rules.map(async (rule) => {
+      try {
+        const details = window.logikRuleDetailsCache[rule.variableName];
+        if (!details) return { rule, hasMatch: false };
+
+        let hasMatch = false;
+        const searchLower = searchText.toLowerCase();
+
+        // Search in condition fields
+        if (details.condition && details.condition.conditions && Array.isArray(details.condition.conditions)) {
+          const conditionMatch = details.condition.conditions.some(condition => {
+            if (condition.lhs && condition.lhs.value && Array.isArray(condition.lhs.value)) {
+              return condition.lhs.value.some(val => val && val.toString().toLowerCase().includes(searchLower));
+            }
+            return false;
+          });
+          if (conditionMatch) {
+            console.log('[Content Script] Found match in conditions for:', rule.variableName);
+            hasMatch = true;
+          }
+        }
+
+        // Search in target fields (actions)
+        if (!hasMatch && details.actions && Array.isArray(details.actions)) {
+          const actionMatch = details.actions.some(action => {
+            const fieldName = action.fieldVariableName || action.fieldName || action.field;
+            if (!fieldName) return false;
+            return fieldName.toLowerCase().includes(searchLower);
+          });
+          if (actionMatch) {
+            console.log('[Content Script] Found match in actions for:', rule.variableName);
+            hasMatch = true;
+          }
+        }
+
+        // Search in scripts
+        if (!hasMatch) {
+          const scriptIds = [];
+          if (details.condition && details.condition.scriptId) {
+            scriptIds.push(details.condition.scriptId);
+          }
+          if (details.actions) {
+            details.actions.forEach(action => {
+              if (action.scriptId) scriptIds.push(action.scriptId);
+            });
+          }
+
+          for (const scriptId of scriptIds) {
+            let scriptContent = window.logikScriptCache[scriptId];
+
+            if (!scriptContent) {
+              try {
+                const scriptResponse = await fetch(
+                  `https://${tenant}.${sector}.logik.io/api/admin/v1/scripts/${scriptId}`,
+                  {
+                    headers: {
+                      'Authorization': `Bearer ${apiKey}`,
+                      'Accept': 'application/json'
+                    }
+                  }
+                );
+
+                if (scriptResponse.ok) {
+                  const scriptData = await scriptResponse.json();
+                  scriptContent = scriptData.content || '';
+                  window.logikScriptCache[scriptId] = scriptContent;
+                }
+              } catch (e) {
+                console.error('[Content Script] Error fetching script:', scriptId, e);
+              }
+            }
+
+            if (scriptContent && scriptContent.toLowerCase().includes(searchLower)) {
+              console.log('[Content Script] Found match in scripts for:', rule.variableName);
+              hasMatch = true;
+              break;
+            }
+          }
+        }
+
+        return { rule, hasMatch };
+      } catch (error) {
+        console.error('[Content Script] Error in findAllFilter:', rule.variableName, error);
+        return { rule, hasMatch: false };
+      }
+    })
+  );
+
+  // Return only rules that have a match
+  return rulesWithMatches
     .filter(({ hasMatch }) => hasMatch)
     .map(({ rule }) => rule);
 }
