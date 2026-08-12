@@ -425,6 +425,12 @@ function getPanelHTML() {
                   >
                   <input
                     type="text"
+                    id="logik-vc-condition-field-input"
+                    class="logik-vc-filter-input"
+                    placeholder="Filter by Condition Field..."
+                  >
+                  <input
+                    type="text"
                     id="logik-vc-script-search-input"
                     class="logik-vc-filter-input"
                     placeholder="Search in Scripts..."
@@ -3368,6 +3374,7 @@ function populateTransactionRulesGrid(rulesToDisplay) {
 function setupRulesFilters() {
   const searchInput = document.getElementById('logik-vc-search-input');
   const targetFieldInput = document.getElementById('logik-vc-target-field-input');
+  const conditionFieldInput = document.getElementById('logik-vc-condition-field-input');
   const scriptSearchInput = document.getElementById('logik-vc-script-search-input');
   const actionFilterBtn = document.getElementById('logik-vc-action-filter-btn');
   const actionFilterMenu = document.getElementById('logik-vc-action-filter-menu');
@@ -3396,6 +3403,13 @@ function setupRulesFilters() {
     targetFieldTimeout = setTimeout(applyRulesFilters, 500);
   });
 
+  // Filter on condition field input (with debounce)
+  let conditionFieldTimeout;
+  conditionFieldInput.addEventListener('input', () => {
+    clearTimeout(conditionFieldTimeout);
+    conditionFieldTimeout = setTimeout(applyRulesFilters, 500);
+  });
+
   // Filter on script search input (with debounce)
   let scriptSearchTimeout;
   scriptSearchInput.addEventListener('input', () => {
@@ -3412,16 +3426,18 @@ function setupRulesFilters() {
 async function applyRulesFilters() {
   const searchInput = document.getElementById('logik-vc-search-input');
   const targetFieldInput = document.getElementById('logik-vc-target-field-input');
+  const conditionFieldInput = document.getElementById('logik-vc-condition-field-input');
   const scriptSearchInput = document.getElementById('logik-vc-script-search-input');
   const statusEl = document.getElementById('logik-vc-rules-status');
   const actionCheckboxes = document.querySelectorAll('.logik-vc-action-checkbox:checked');
 
   const searchTerm = searchInput.value.toLowerCase();
   const targetField = targetFieldInput.value.toLowerCase();
+  const conditionField = conditionFieldInput.value.toLowerCase();
   const scriptSearch = scriptSearchInput.value.toLowerCase();
   const selectedActions = Array.from(actionCheckboxes).map(cb => cb.value);
 
-  console.log('[Content Script] Applying filters:', { searchTerm, selectedActions: Array.from(actionCheckboxes).map(cb => cb.value), targetField, scriptSearch });
+  console.log('[Content Script] Applying filters:', { searchTerm, selectedActions: Array.from(actionCheckboxes).map(cb => cb.value), targetField, conditionField, scriptSearch });
 
   // Filter rules
   let filteredRules = window.logikAllRules.filter(rule => {
@@ -3453,6 +3469,12 @@ async function applyRulesFilters() {
     filteredRules = await filterByTargetField(filteredRules, targetField);
   }
 
+  // Condition field filter - searches rule conditions
+  if (conditionField) {
+    statusEl.textContent = 'Filtering by condition field...';
+    filteredRules = await filterByConditionField(filteredRules, conditionField);
+  }
+
   // Script search filter - searches rule scripts
   if (scriptSearch) {
     console.log('[Content Script] Starting script search with', filteredRules.length, 'rules');
@@ -3462,7 +3484,7 @@ async function applyRulesFilters() {
   }
 
   // Update status with filtered count
-  if (searchTerm || selectedActions.length > 0 || targetField || scriptSearch) {
+  if (searchTerm || selectedActions.length > 0 || targetField || conditionField || scriptSearch) {
     statusEl.textContent = `Showing ${filteredRules.length} of ${window.logikRuleCount} rule(s)`;
   } else {
     statusEl.textContent = `Loaded ${window.logikRuleCount} active rule(s)`;
@@ -3534,6 +3556,78 @@ async function filterByTargetField(rules, targetField) {
       }
 
       return match;
+    });
+
+    return matches;
+  });
+}
+
+async function filterByConditionField(rules, conditionField) {
+  // Initialize cache for rule details
+  if (!window.logikRuleDetailsCache) {
+    window.logikRuleDetailsCache = {};
+  }
+
+  // Get credentials (auto-detects environment)
+  const apiKey = await getLogikApiKeyForCurrentEnv();
+  if (!apiKey) return rules;
+
+  // Extract tenant and sector
+  const hostname = new URL(window.location.href).hostname;
+  const parts = hostname.split('.');
+  const tenant = parts[0];
+  const sector = parts[1];
+
+  // Fetch rule details for rules we don't have cached
+  const rulesToFetch = rules.filter(rule => !window.logikRuleDetailsCache[rule.variableName]);
+
+  if (rulesToFetch.length > 0) {
+    const fetchPromises = rulesToFetch.map(rule =>
+      fetch(`https://${tenant}.${sector}.logik.io/api/admin/v3/rules/${rule.variableName}`, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Accept': 'application/json'
+        }
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(details => {
+          if (details) {
+            window.logikRuleDetailsCache[rule.variableName] = details;
+          }
+          return details;
+        })
+        .catch(e => {
+          console.error('Failed to fetch rule details:', e);
+          return null;
+        })
+    );
+
+    await Promise.all(fetchPromises);
+  }
+
+  // Filter rules by condition field
+  const searchLower = conditionField.toLowerCase();
+  return rules.filter(rule => {
+    const details = window.logikRuleDetailsCache[rule.variableName];
+    if (!details || !details.conditions) return false;
+
+    const matches = details.conditions.some(condition => {
+      // Check if condition has lhs with value array
+      if (!condition.lhs || !condition.lhs.value || !Array.isArray(condition.lhs.value)) {
+        return false;
+      }
+
+      // Check if any value in the lhs.value array contains the field
+      const fieldMatch = condition.lhs.value.some(val => {
+        const valStr = (val || '').toString().toLowerCase();
+        return valStr.includes(searchLower);
+      });
+
+      if (fieldMatch) {
+        console.log('[Content Script] Found condition field match in rule', rule.variableName, '- field:', condition.lhs.value);
+      }
+
+      return fieldMatch;
     });
 
     return matches;
