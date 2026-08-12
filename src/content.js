@@ -3612,22 +3612,20 @@ async function filterByConditionField(rules, conditionField) {
     if (!details || !details.conditions) return false;
 
     const matches = details.conditions.some(condition => {
-      // Check if condition has lhs with value array
-      if (!condition.lhs || !condition.lhs.value || !Array.isArray(condition.lhs.value)) {
-        return false;
+      // Check lhs side only
+      if (condition.lhs && condition.lhs.field === true && condition.lhs.value && Array.isArray(condition.lhs.value)) {
+        const lhsMatch = condition.lhs.value.some(val => {
+          if (!val) return false;
+          return val.toString().toLowerCase().includes(searchLower);
+        });
+
+        if (lhsMatch) {
+          console.log('[Content Script] Found condition field match in rule', rule.variableName, '- field:', condition.lhs.value[0]);
+          return true;
+        }
       }
 
-      // Check if any value in the lhs.value array contains the field
-      const fieldMatch = condition.lhs.value.some(val => {
-        const valStr = (val || '').toString().toLowerCase();
-        return valStr.includes(searchLower);
-      });
-
-      if (fieldMatch) {
-        console.log('[Content Script] Found condition field match in rule', rule.variableName, '- field:', condition.lhs.value);
-      }
-
-      return fieldMatch;
+      return false;
     });
 
     return matches;
