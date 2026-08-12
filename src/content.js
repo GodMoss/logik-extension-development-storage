@@ -419,15 +419,15 @@ function getPanelHTML() {
                   >
                   <input
                     type="text"
-                    id="logik-vc-target-field-input"
-                    class="logik-vc-filter-input"
-                    placeholder="Filter by Target Field..."
-                  >
-                  <input
-                    type="text"
                     id="logik-vc-condition-field-input"
                     class="logik-vc-filter-input"
                     placeholder="Filter by Condition Field..."
+                  >
+                  <input
+                    type="text"
+                    id="logik-vc-target-field-input"
+                    class="logik-vc-filter-input"
+                    placeholder="Filter by Target Field..."
                   >
                   <input
                     type="text"
