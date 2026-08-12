@@ -3455,8 +3455,10 @@ async function applyRulesFilters() {
 
   // Aggregate field filter - searches rule scripts
   if (aggregateField) {
+    console.log('[Content Script] Starting aggregate search with', filteredRules.length, 'rules');
     statusEl.textContent = 'Searching rule scripts for aggregate...';
     filteredRules = await filterByAggregate(filteredRules, aggregateField);
+    console.log('[Content Script] Aggregate search returned', filteredRules.length, 'matching rules');
   }
 
   // Update status with filtered count
@@ -3578,6 +3580,7 @@ async function filterByAggregate(rules, aggregateField) {
         }
 
         const ruleDetails = await ruleResponse.json();
+        console.log('[Content Script] Fetched rule details for:', rule.variableName, 'scriptId:', ruleDetails.scriptId);
 
         // Check if rule has a scriptId
         if (!ruleDetails.scriptId) {
@@ -3588,6 +3591,7 @@ async function filterByAggregate(rules, aggregateField) {
         // Fetch the script content
         let scriptContent = window.logikScriptCache[ruleDetails.scriptId];
         if (!scriptContent) {
+          console.log('[Content Script] Fetching script:', ruleDetails.scriptId);
           const scriptResponse = await fetch(
             `https://${tenant}.${sector}.logik.io/api/admin/v1/scripts/${ruleDetails.scriptId}`,
             {
@@ -3599,17 +3603,20 @@ async function filterByAggregate(rules, aggregateField) {
           );
 
           if (!scriptResponse.ok) {
-            console.warn('[Content Script] Failed to fetch script:', ruleDetails.scriptId);
+            console.warn('[Content Script] Failed to fetch script:', ruleDetails.scriptId, 'status:', scriptResponse.status);
             return { rule, hasAggregate: false };
           }
 
           const scriptData = await scriptResponse.json();
           scriptContent = scriptData.content || '';
           window.logikScriptCache[ruleDetails.scriptId] = scriptContent;
+          console.log('[Content Script] Cached script, content length:', scriptContent.length);
         }
 
         // Search for aggregate field in script (exact match, case-insensitive)
-        const hasAggregate = scriptContent.toLowerCase().includes(aggregateField.toLowerCase());
+        const searchTerm = aggregateField.toLowerCase();
+        const hasAggregate = scriptContent.toLowerCase().includes(searchTerm);
+        console.log('[Content Script] Searching for "' + searchTerm + '" in script - found:', hasAggregate);
 
         if (hasAggregate) {
           console.log('[Content Script] Found aggregate in rule script:', rule.variableName);
