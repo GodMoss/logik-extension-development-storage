@@ -858,6 +858,7 @@ async function restoreVersion(blueprintName, filename) {
     let jobStatus = 'STARTED';
     let pollCount = 0;
     const maxPolls = 120; // Max 2 minutes (120 * 1 second)
+    let finalJobData = null;
 
     while (jobStatus !== 'COMPLETED' && pollCount < maxPolls) {
       await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second
@@ -877,7 +878,9 @@ async function restoreVersion(blueprintName, filename) {
 
       const statusData = await statusResponse.json();
       jobStatus = statusData.status;
+      finalJobData = statusData;
       console.log(`[restoreVersion] Job status (poll ${pollCount + 1}):`, jobStatus);
+      console.log('[restoreVersion] Full job data:', JSON.stringify(statusData, null, 2));
       pollCount++;
     }
 
@@ -886,6 +889,7 @@ async function restoreVersion(blueprintName, filename) {
     }
 
     console.log('[restoreVersion] Restore job completed successfully');
+    console.log('[restoreVersion] Final job data:', JSON.stringify(finalJobData, null, 2));
     return { success: true, message: `Version ${filename} restored successfully` };
   } catch (error) {
     throw new Error(`Restore failed: ${error.message}`);
