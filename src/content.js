@@ -2905,30 +2905,53 @@ async function handleRestoreVersion(e) {
 
 async function downloadFileFromIndexedDB(key) {
   try {
+    console.log('[Content Script] Attempting to download file with key:', key);
+
     const db = await new Promise((resolve, reject) => {
       const request = indexedDB.open('RestoreVersionDB', 1);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        console.log('[Content Script] IndexedDB opened successfully');
+        resolve(request.result);
+      };
+      request.onerror = () => {
+        console.error('[Content Script] IndexedDB open error:', request.error);
+        reject(request.error);
+      };
     });
 
     const transaction = db.transaction('files', 'readonly');
     const store = transaction.objectStore('files');
-    const getRequest = store.get(key);
 
-    getRequest.onsuccess = () => {
-      const blob = getRequest.result;
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = key.replace('github_', '') || 'download.zip';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        console.log('[Content Script] Downloaded file:', key);
-      }
-    };
+    return new Promise((resolve, reject) => {
+      const getRequest = store.get(key);
+
+      getRequest.onsuccess = () => {
+        const blob = getRequest.result;
+        console.log('[Content Script] Retrieved from IndexedDB - blob:', blob ? blob.type + ' ' + blob.size + ' bytes' : 'null');
+
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = key.replace('github_', '') || 'download.zip';
+          console.log('[Content Script] Creating download link with filename:', a.download);
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          console.log('[Content Script] File downloaded successfully:', key);
+          resolve();
+        } else {
+          console.warn('[Content Script] File not found in IndexedDB with key:', key);
+          resolve();
+        }
+      };
+
+      getRequest.onerror = () => {
+        console.error('[Content Script] IndexedDB get error:', getRequest.error);
+        reject(getRequest.error);
+      };
+    });
   } catch (error) {
     console.error('[Content Script] Failed to download file:', error);
   }
