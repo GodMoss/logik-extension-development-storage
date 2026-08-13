@@ -810,49 +810,66 @@ async function restoreVersion(blueprintName, filename) {
     console.log('[restoreVersion] Uploading to Logik:', logikUrl);
     console.log('[restoreVersion] ZIP blob details - type:', zipBlob.type, 'size:', zipBlob.size);
 
-    // Try uploading directly as blob first (let browser handle encoding)
-    // Create form data in a more reliable way
-    const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substr(2);
-    const zipArrayBuffer = await zipBlob.arrayBuffer();
-    const zipArray = new Uint8Array(zipArrayBuffer);
+    // Try using FormData (may be available in service workers)
+    let uploadResponse;
+    try {
+      const formData = new FormData();
+      formData.append('jobType', 'GENERIC_IMPORT');
+      formData.append('file', zipBlob, filename);
 
-    // Build multipart body more carefully
-    const parts = [];
+      console.log('[restoreVersion] Using FormData for upload');
 
-    // Add jobType field
-    let part1 = `--${boundary}\r\nContent-Disposition: form-data; name="jobType"\r\n\r\nGENERIC_IMPORT\r\n`;
-    parts.push(new TextEncoder().encode(part1));
+      uploadResponse = await fetch(logikUrl, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+    } catch (formDataError) {
+      // Fallback to manual multipart if FormData not available
+      console.log('[restoreVersion] FormData not available, using manual multipart');
 
-    // Add file field
-    let part2 = `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: application/zip\r\n\r\n`;
-    parts.push(new TextEncoder().encode(part2));
+      const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substr(2);
+      const zipArrayBuffer = await zipBlob.arrayBuffer();
+      const zipArray = new Uint8Array(zipArrayBuffer);
 
-    // Add zip data
-    parts.push(zipArray);
+      // Build multipart body
+      const parts = [];
 
-    // Add closing boundary
-    let part3 = `\r\n--${boundary}--\r\n`;
-    parts.push(new TextEncoder().encode(part3));
+      // Add jobType field
+      let part1 = `--${boundary}\r\nContent-Disposition: form-data; name="jobType"\r\n\r\nGENERIC_IMPORT\r\n`;
+      parts.push(new TextEncoder().encode(part1));
 
-    // Combine all parts
-    const totalLength = parts.reduce((sum, p) => sum + p.length, 0);
-    const finalBody = new Uint8Array(totalLength);
-    let offset = 0;
-    for (const part of parts) {
-      finalBody.set(part, offset);
-      offset += part.length;
+      // Add file field
+      let part2 = `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: application/zip\r\n\r\n`;
+      parts.push(new TextEncoder().encode(part2));
+
+      // Add zip data
+      parts.push(zipArray);
+
+      // Add closing boundary
+      let part3 = `\r\n--${boundary}--\r\n`;
+      parts.push(new TextEncoder().encode(part3));
+
+      // Combine all parts
+      const totalLength = parts.reduce((sum, p) => sum + p.length, 0);
+      const finalBody = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const part of parts) {
+        finalBody.set(part, offset);
+        offset += part.length;
+      }
+
+      console.log('[restoreVersion] Final body size:', finalBody.length, 'bytes');
+
+      uploadResponse = await fetch(logikUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        },
+        credentials: 'include',
+        body: finalBody,
+      });
     }
-
-    console.log('[restoreVersion] Final body size:', finalBody.length, 'bytes');
-
-    const uploadResponse = await fetch(logikUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': `multipart/form-data; boundary=${boundary}`,
-      },
-      credentials: 'include',
-      body: finalBody,
-    });
 
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
