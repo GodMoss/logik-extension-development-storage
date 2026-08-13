@@ -843,13 +843,19 @@ async function restoreVersion(blueprintName, filename) {
       throw new Error(`Failed to upload to Logik: ${uploadResponse.status}`);
     }
 
+    console.log('[restoreVersion] Upload response status:', uploadResponse.status);
     const uploadResult = await uploadResponse.json();
-    console.log('[restoreVersion] Upload response:', uploadResult);
+    console.log('[restoreVersion] Full upload response:', JSON.stringify(uploadResult, null, 2));
 
     const jobId = uploadResult.id;
+    console.log('[restoreVersion] Extracted jobId:', jobId);
+
     if (!jobId) {
+      console.error('[restoreVersion] No job ID in response:', uploadResult);
       throw new Error('No job ID returned from upload');
     }
+
+    console.log('[restoreVersion] Starting job polling for jobId:', jobId);
 
     // Poll job status until complete
     const jobUrl = `https://${environment}.test.logik.io/api/admin/v1/job/${jobId}`;
