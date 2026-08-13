@@ -782,8 +782,10 @@ async function restoreVersion(blueprintName, filename) {
       throw new Error(`Failed to download version from GitHub: ${downloadResponse.status} - ${errorText}`);
     }
 
-    const zipBlob = await downloadResponse.blob();
-    console.log('[restoreVersion] Downloaded ZIP successfully, size:', zipBlob.size, 'bytes');
+    // Create blob with correct MIME type
+    const blobData = await downloadResponse.arrayBuffer();
+    const zipBlob = new Blob([blobData], { type: 'application/zip' });
+    console.log('[restoreVersion] Downloaded ZIP successfully, size:', zipBlob.size, 'bytes', 'type:', zipBlob.type);
 
     // Get the Logik API key from storage
     const data = await new Promise((resolve) => {
