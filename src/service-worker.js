@@ -787,6 +787,15 @@ async function restoreVersion(blueprintName, filename) {
     const zipBlob = new Blob([blobData], { type: 'application/zip' });
     console.log('[restoreVersion] Downloaded ZIP successfully, size:', zipBlob.size, 'bytes', 'type:', zipBlob.type);
 
+    // Log the raw file data for debugging (as base64)
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const base64data = e.target.result.split(',')[1];
+      console.log('[restoreVersion] GitHub file base64 (first 100 chars):', base64data.substring(0, 100));
+      console.log('[restoreVersion] GitHub file base64 length:', base64data.length);
+    };
+    reader.readAsDataURL(zipBlob);
+
     // Get the Logik API key from storage
     const data = await new Promise((resolve) => {
       chrome.storage.local.get('profiles', (result) => {
