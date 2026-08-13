@@ -806,27 +806,42 @@ async function restoreVersion(blueprintName, filename) {
     // Upload to Logik API
     const logikUrl = `https://${environment}.test.logik.io/a/admin/v2/uploadFile`;
     console.log('[restoreVersion] Uploading to Logik:', logikUrl);
+    console.log('[restoreVersion] ZIP blob details - type:', zipBlob.type, 'size:', zipBlob.size);
 
-    // Construct multipart/form-data manually (service workers don't have FormData)
+    // Try uploading directly as blob first (let browser handle encoding)
+    // Create form data in a more reliable way
     const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substr(2);
     const zipArrayBuffer = await zipBlob.arrayBuffer();
     const zipArray = new Uint8Array(zipArrayBuffer);
 
-    let body = '';
-    body += `--${boundary}\r\n`;
-    body += 'Content-Disposition: form-data; name="jobType"\r\n\r\n';
-    body += 'GENERIC_IMPORT\r\n';
-    body += `--${boundary}\r\n`;
-    body += `Content-Disposition: form-data; name="file"; filename="${filename}"\r\n`;
-    body += 'Content-Type: application/zip\r\n\r\n';
+    // Build multipart body more carefully
+    const parts = [];
 
-    const bodyStart = new TextEncoder().encode(body);
-    const bodyEnd = new TextEncoder().encode(`\r\n--${boundary}--\r\n`);
+    // Add jobType field
+    let part1 = `--${boundary}\r\nContent-Disposition: form-data; name="jobType"\r\n\r\nGENERIC_IMPORT\r\n`;
+    parts.push(new TextEncoder().encode(part1));
 
-    const finalBody = new Uint8Array(bodyStart.length + zipArray.length + bodyEnd.length);
-    finalBody.set(bodyStart);
-    finalBody.set(zipArray, bodyStart.length);
-    finalBody.set(bodyEnd, bodyStart.length + zipArray.length);
+    // Add file field
+    let part2 = `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: application/zip\r\n\r\n`;
+    parts.push(new TextEncoder().encode(part2));
+
+    // Add zip data
+    parts.push(zipArray);
+
+    // Add closing boundary
+    let part3 = `\r\n--${boundary}--\r\n`;
+    parts.push(new TextEncoder().encode(part3));
+
+    // Combine all parts
+    const totalLength = parts.reduce((sum, p) => sum + p.length, 0);
+    const finalBody = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const part of parts) {
+      finalBody.set(part, offset);
+      offset += part.length;
+    }
+
+    console.log('[restoreVersion] Final body size:', finalBody.length, 'bytes');
 
     const uploadResponse = await fetch(logikUrl, {
       method: 'POST',
