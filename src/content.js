@@ -2889,6 +2889,10 @@ async function handleRestoreVersion(e) {
     }
 
     console.log('[Content Script] Restore successful!');
+
+    // Download the file that was just uploaded for inspection
+    await downloadFileFromIndexedDB(`github_${filename}`);
+
     showRestoreSuccess(filename);
   } catch (error) {
     console.error('[Content Script] Restore failed:', error);
@@ -2896,6 +2900,37 @@ async function handleRestoreVersion(e) {
   } finally {
     button.disabled = false;
     button.style.opacity = '1';
+  }
+}
+
+async function downloadFileFromIndexedDB(key) {
+  try {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('RestoreVersionDB', 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+
+    const transaction = db.transaction('files', 'readonly');
+    const store = transaction.objectStore('files');
+    const getRequest = store.get(key);
+
+    getRequest.onsuccess = () => {
+      const blob = getRequest.result;
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = key.replace('github_', '') || 'download.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        console.log('[Content Script] Downloaded file:', key);
+      }
+    };
+  } catch (error) {
+    console.error('[Content Script] Failed to download file:', error);
   }
 }
 
