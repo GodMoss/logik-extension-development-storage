@@ -806,7 +806,7 @@ async function restoreVersion(blueprintName, filename) {
     console.log('[restoreVersion] Using environment:', environment);
 
     // Upload to Logik API
-    const logikUrl = `https://${environment}.test.logik.io/a/admin/v2/uploadFile`;
+    const logikUrl = `https://${environment}.test.logik.io/api/admin/v2/uploadFile`;
     console.log('[restoreVersion] Uploading to Logik:', logikUrl);
     console.log('[restoreVersion] ZIP blob details - type:', zipBlob.type, 'size:', zipBlob.size);
 
@@ -817,11 +817,14 @@ async function restoreVersion(blueprintName, filename) {
       formData.append('jobType', 'GENERIC_IMPORT');
       formData.append('file', zipBlob, filename);
 
-      console.log('[restoreVersion] Using FormData for upload');
+      console.log('[restoreVersion] Using FormData for upload with Bearer token');
 
       uploadResponse = await fetch(logikUrl, {
         method: 'POST',
-        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Accept': 'application/json',
+        },
         body: formData,
       });
     } catch (formDataError) {
@@ -864,9 +867,10 @@ async function restoreVersion(blueprintName, filename) {
       uploadResponse = await fetch(logikUrl, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Accept': 'application/json',
           'Content-Type': `multipart/form-data; boundary=${boundary}`,
         },
-        credentials: 'include',
         body: finalBody,
       });
     }
