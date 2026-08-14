@@ -795,9 +795,8 @@ async function restoreVersion(blueprintName, filename) {
       throw new Error(`Failed to download version from GitHub: ${downloadResponse.status} - ${errorText}`);
     }
 
-    // Create blob with correct MIME type
-    const blobData = await downloadResponse.arrayBuffer();
-    const zipBlob = new Blob([blobData], { type: 'application/zip' });
+    // Use blob() like the content script does (it works correctly)
+    const zipBlob = await downloadResponse.blob();
     console.log('[restoreVersion] Downloaded ZIP successfully, size:', zipBlob.size, 'bytes', 'type:', zipBlob.type);
 
 
