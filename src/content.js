@@ -2889,6 +2889,14 @@ async function handleRestoreVersion(e) {
     }
 
     console.log('[Content Script] Restore successful!');
+
+    // Download the GitHub file for inspection (before upload)
+    try {
+      await downloadGitHubFile(blueprintName, filename);
+    } catch (downloadError) {
+      console.warn('[Content Script] Download failed, but restore is proceeding:', downloadError);
+    }
+
     showRestoreSuccess(filename);
   } catch (error) {
     console.error('[Content Script] Restore failed:', error);
@@ -2897,6 +2905,53 @@ async function handleRestoreVersion(e) {
     button.disabled = false;
     button.style.opacity = '1';
   }
+}
+
+async function downloadGitHubFile(blueprintName, filename) {
+  console.log('[Content Script] Downloading GitHub file for inspection:', blueprintName, filename);
+
+  // Get GitHub config from service worker
+  const config = await new Promise((resolve) => {
+    chrome.runtime.sendMessage({ action: 'getGithubConfig' }, (response) => {
+      resolve(response);
+    });
+  });
+
+  if (!config.username || !config.repo || !config.token) {
+    console.warn('[Content Script] GitHub credentials not configured');
+    return;
+  }
+
+  const filepath = `${blueprintName}/${filename}`;
+  const githubUrl = `https://api.github.com/repos/${config.username}/${config.repo}/contents/${filepath}`;
+
+  console.log('[Content Script] Fetching from:', githubUrl);
+
+  const response = await fetch(githubUrl, {
+    headers: {
+      'Authorization': `token ${config.token}`,
+      'Accept': 'application/vnd.github.v3.raw',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`GitHub fetch failed: ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  console.log('[Content Script] Downloaded blob, size:', blob.size, 'type:', blob.type);
+
+  // Download using proven pattern
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `github_${filename}`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+
+  console.log('[Content Script] File downloaded for inspection');
 }
 
 async function handleDeleteVersion(e) {

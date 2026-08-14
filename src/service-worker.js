@@ -113,6 +113,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  if (request.action === 'getGithubConfig') {
+    chrome.storage.local.get(['githubToken', 'githubUsername', 'githubRepo'], (data) => {
+      sendResponse({
+        token: data.githubToken,
+        username: data.githubUsername,
+        repo: data.githubRepo
+      });
+    });
+
+    return true;
+  }
+
 });
 
 async function pushVersion(blueprintZipData) {
@@ -788,21 +800,6 @@ async function restoreVersion(blueprintName, filename) {
     const zipBlob = new Blob([blobData], { type: 'application/zip' });
     console.log('[restoreVersion] Downloaded ZIP successfully, size:', zipBlob.size, 'bytes', 'type:', zipBlob.type);
 
-    // Download the file directly using Chrome downloads API
-    try {
-      const url = URL.createObjectURL(zipBlob);
-      await chrome.downloads.download({
-        url: url,
-        filename: `github_${filename}`,
-        saveAs: false
-      });
-      console.log('[restoreVersion] Downloaded file to user machine for inspection');
-
-      // Revoke URL after a delay to ensure download started
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (downloadError) {
-      console.log('[restoreVersion] Chrome downloads API not available or failed, file will still be uploaded');
-    }
 
     // Get the Logik API key from storage
     const data = await new Promise((resolve) => {
