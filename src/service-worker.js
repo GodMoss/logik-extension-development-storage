@@ -970,7 +970,7 @@ async function restoreVersion(blueprintName, filename) {
 
     console.log('[restoreVersion] Restore job completed successfully');
     console.log('[restoreVersion] Final job data:', JSON.stringify(finalJobData, null, 2));
-    return { success: true, message: `Version ${filename} restored successfully` };
+    return { success: true, message: `Version ${filename} restored successfully`, result: finalJobData };
   } catch (error) {
     throw new Error(`Restore failed: ${error.message}`);
   }

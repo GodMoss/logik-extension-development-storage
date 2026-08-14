@@ -2505,7 +2505,7 @@ async function loadVersionHistory() {
   }
 }
 
-function showRestoreSuccess(filename) {
+function showRestoreSuccess(filename, jobResult) {
   // Create modal overlay
   const modal = document.createElement('div');
   modal.style.cssText = `
@@ -2519,6 +2519,7 @@ function showRestoreSuccess(filename) {
     align-items: center;
     justify-content: center;
     z-index: 10000;
+    overflow-y: auto;
   `;
 
   // Create modal content
@@ -2537,72 +2538,117 @@ function showRestoreSuccess(filename) {
     border: 2px solid ${borderColor};
     border-radius: 16px;
     padding: 32px;
-    max-width: 400px;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
     box-shadow: 0 20px 60px rgba(211, 47, 47, 0.2);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     position: relative;
+    margin: auto;
   `;
 
   // Create dancing skeleton animation styles
   const style = document.createElement('style');
   style.textContent = `
     @keyframes skeletonDance {
-      0% {
-        transform: translateY(0) rotate(-5deg);
-      }
-      25% {
-        transform: translateY(-10px) rotate(5deg);
-      }
-      50% {
-        transform: translateY(0) rotate(-5deg);
-      }
-      75% {
-        transform: translateY(-10px) rotate(5deg);
-      }
-      100% {
-        transform: translateY(0) rotate(-5deg);
-      }
+      0% { transform: translateY(0) rotate(-5deg); }
+      25% { transform: translateY(-10px) rotate(5deg); }
+      50% { transform: translateY(0) rotate(-5deg); }
+      75% { transform: translateY(-10px) rotate(5deg); }
+      100% { transform: translateY(0) rotate(-5deg); }
     }
-
-    .dancing-skeleton {
-      display: inline-block;
-      font-size: 64px;
-      animation: skeletonDance 0.8s ease-in-out infinite;
-    }
-
-    .gravestone {
-      display: inline-block;
-      font-size: 32px;
-    }
+    .dancing-skeleton { display: inline-block; font-size: 64px; animation: skeletonDance 0.8s ease-in-out infinite; }
+    .gravestone { display: inline-block; font-size: 32px; }
+    .import-summary { background: rgba(100, 100, 100, 0.2); border-left: 3px solid ${primaryColor}; padding: 12px; margin: 16px 0; border-radius: 4px; }
+    .summary-row { display: flex; justify-content: space-between; margin: 6px 0; font-size: 13px; }
+    .summary-label { color: #aaa; }
+    .summary-value { color: #fff; font-weight: 600; }
+    .messages-section { margin-top: 20px; }
+    .message-category { margin-top: 12px; }
+    .message-category-title { font-size: 12px; font-weight: 700; color: ${primaryColor}; margin: 8px 0 4px 0; text-transform: uppercase; }
+    .message-item { background: rgba(0, 0, 0, 0.3); padding: 8px; margin: 4px 0; border-radius: 4px; font-size: 12px; line-height: 1.5; color: #ddd; border-left: 2px solid #666; }
+    .message-item.warning { border-left-color: #ff9800; }
+    .message-item.error { border-left-color: #d32f2f; }
+    .message-type { font-weight: 600; font-size: 11px; text-transform: uppercase; margin-bottom: 4px; }
+    .message-type.warning { color: #ff9800; }
+    .message-type.error { color: #d32f2f; }
   `;
   document.head.appendChild(style);
+
+  // Build summary and messages HTML
+  let summaryHTML = '';
+  let messagesHTML = '';
+
+  if (jobResult && jobResult.result) {
+    const counts = jobResult.result.counts;
+    if (counts) {
+      summaryHTML = `
+        <div class="import-summary">
+          <div class="summary-row">
+            <span class="summary-label">Success:</span>
+            <span class="summary-value">${counts.success || 0}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Warnings:</span>
+            <span class="summary-value" style="color: #ff9800;">${counts.warning || 0}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Errors:</span>
+            <span class="summary-value" style="color: #d32f2f;">${counts.error || 0}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Total:</span>
+            <span class="summary-value">${counts.total || 0}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Organize messages by category
+    if (jobResult.result.messages && jobResult.result.messages.length > 0) {
+      const messagesByCategory = {};
+      jobResult.result.messages.forEach(msg => {
+        const category = msg.category || 'other';
+        if (!messagesByCategory[category]) {
+          messagesByCategory[category] = [];
+        }
+        messagesByCategory[category].push(msg);
+      });
+
+      messagesHTML = '<div class="messages-section">';
+      Object.keys(messagesByCategory).sort().forEach(category => {
+        messagesHTML += `<div class="message-category"><div class="message-category-title">${category}</div>`;
+        messagesByCategory[category].forEach(msg => {
+          const typeClass = msg.type || 'info';
+          messagesHTML += `
+            <div class="message-item ${typeClass}">
+              <div class="message-type ${typeClass}">${msg.type || 'info'}</div>
+              <div>${msg.message}</div>
+            </div>
+          `;
+        });
+        messagesHTML += '</div>';
+      });
+      messagesHTML += '</div>';
+    }
+  }
 
   content.innerHTML = `
     <div style="display: flex; align-items: center; margin-bottom: 16px;">
       <span class="gravestone">⚰️</span>
-      <h2 style="
-        margin: 0 0 0 12px;
-        font-size: 20px;
-        font-weight: 700;
-        color: ${primaryColor};
-      ">Resurrection Protocol</h2>
+      <h2 style="margin: 0 0 0 12px; font-size: 20px; font-weight: 700; color: ${primaryColor};">Resurrection Protocol</h2>
     </div>
 
-    <div style="
-      text-align: center;
-      margin: 24px 0;
-      line-height: 1;
-    ">
+    <div style="text-align: center; margin: 24px 0; line-height: 1;">
       <span class="dancing-skeleton">💀</span>
     </div>
 
-    <p style="
-      margin: 0 0 24px 0;
-      font-size: 14px;
-      color: #cccccc;
-      line-height: 1.6;
-      text-align: center;
-    ">Version <strong style="color: ${primaryColor};">${filename}</strong> has risen from the dead!</p>
+    <p style="margin: 0 0 24px 0; font-size: 14px; color: #cccccc; line-height: 1.6; text-align: center;">
+      Version <strong style="color: ${primaryColor};">${filename}</strong> has risen from the dead!
+    </p>
+
+    ${summaryHTML}
+    ${messagesHTML}
 
     <button id="restore-close" style="
       width: 100%;
@@ -2616,6 +2662,7 @@ function showRestoreSuccess(filename) {
       font-weight: 600;
       transition: all 0.2s ease;
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+      margin-top: 16px;
     ">Welcome Back</button>
   `;
 
@@ -2903,7 +2950,8 @@ async function handleRestoreVersion(e) {
     }
 
     console.log('[Content Script] Restore successful!');
-    showRestoreSuccess(filename);
+    console.log('[Content Script] Job result:', response.result);
+    showRestoreSuccess(filename, response.result);
   } catch (error) {
     console.error('[Content Script] Restore failed:', error);
     alert(`Failed to restore version: ${error.message}`);
