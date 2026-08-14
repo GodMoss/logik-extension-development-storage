@@ -116,23 +116,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'downloadFile') {
     console.log('[Service Worker] downloadFile requested for key:', request.key);
 
-    // Retrieve file from IndexedDB and send as base64
+    // Retrieve file from IndexedDB and send as array buffer
     const db = indexedDB.open('RestoreVersionDB', 1);
     db.onsuccess = () => {
       const transaction = db.result.transaction('files', 'readonly');
       const store = transaction.objectStore('files');
       const getRequest = store.get(request.key);
 
-      getRequest.onsuccess = () => {
+      getRequest.onsuccess = async () => {
         const blob = getRequest.result;
         if (blob) {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const base64 = reader.result.split(',')[1];
-            console.log('[Service Worker] Sending file as base64, length:', base64.length);
-            sendResponse({ data: base64 });
-          };
-          reader.readAsDataURL(blob);
+          try {
+            // Convert blob to array buffer
+            const arrayBuffer = await blob.arrayBuffer();
+            // Convert array buffer to array for transmission
+            const bytes = Array.from(new Uint8Array(arrayBuffer));
+            console.log('[Service Worker] Sending file as array, size:', bytes.length);
+            sendResponse({ data: bytes });
+          } catch (error) {
+            console.error('[Service Worker] Error converting blob:', error);
+            sendResponse({ error: error.message });
+          }
         } else {
           console.warn('[Service Worker] File not found in IndexedDB:', request.key);
           sendResponse({ error: 'File not found' });

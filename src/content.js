@@ -2923,14 +2923,10 @@ async function downloadFileFromIndexedDB(key) {
       return;
     }
 
-    // Convert base64 to blob
-    const byteCharacters = atob(response.data);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
+    // Convert array to blob
+    const byteArray = new Uint8Array(response.data);
     const blob = new Blob([byteArray], { type: 'application/zip' });
+    console.log('[Content Script] Received blob, size:', blob.size);
 
     // Download using the working pattern from downloadSingleTable
     const url = window.URL.createObjectURL(blob);
