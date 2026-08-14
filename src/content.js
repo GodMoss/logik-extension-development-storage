@@ -2547,17 +2547,10 @@ function showRestoreSuccess(filename, jobResult) {
     margin: auto;
   `;
 
-  // Create dancing skeleton animation styles
+  // Create skull styles
   const style = document.createElement('style');
   style.textContent = `
-    @keyframes skeletonDance {
-      0% { transform: translateY(0) rotate(-5deg); }
-      25% { transform: translateY(-10px) rotate(5deg); }
-      50% { transform: translateY(0) rotate(-5deg); }
-      75% { transform: translateY(-10px) rotate(5deg); }
-      100% { transform: translateY(0) rotate(-5deg); }
-    }
-    .dancing-skeleton { display: inline-block; font-size: 64px; animation: skeletonDance 0.8s ease-in-out infinite; }
+    .dancing-skeleton { display: inline-block; font-size: 64px; }
     .gravestone { display: inline-block; font-size: 32px; }
     .import-summary { background: rgba(100, 100, 100, 0.2); border-left: 3px solid ${primaryColor}; padding: 12px; margin: 16px 0; border-radius: 4px; }
     .summary-row { display: flex; justify-content: space-between; margin: 6px 0; font-size: 13px; }
@@ -2578,6 +2571,8 @@ function showRestoreSuccess(filename, jobResult) {
   // Build summary and messages HTML
   let summaryHTML = '';
   let messagesHTML = '';
+
+  console.log('[showRestoreSuccess] jobResult:', jobResult);
 
   if (jobResult && jobResult.result) {
     const counts = jobResult.result.counts;
