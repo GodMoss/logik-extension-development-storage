@@ -795,8 +795,31 @@ async function restoreVersion(blueprintName, filename) {
       throw new Error(`Failed to download version from GitHub: ${downloadResponse.status} - ${errorText}`);
     }
 
-    // Use blob() like the content script does (it works correctly)
-    const zipBlob = await downloadResponse.blob();
+    // Handle both JSON metadata response and raw binary
+    let zipBlob;
+    const contentType = downloadResponse.headers.get('Content-Type');
+    console.log('[restoreVersion] GitHub response Content-Type:', contentType);
+
+    if (contentType && contentType.includes('application/json')) {
+      // GitHub returned JSON with base64-encoded content
+      const metadata = await downloadResponse.json();
+      const base64Content = metadata.content;
+
+      // Decode base64 to binary
+      const binaryString = atob(base64Content);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      zipBlob = new Blob([bytes], { type: 'application/zip' });
+      console.log('[restoreVersion] Decoded base64 JSON response, size:', zipBlob.size, 'bytes');
+    } else {
+      // GitHub returned raw binary
+      zipBlob = await downloadResponse.blob();
+      console.log('[restoreVersion] Got raw binary response, size:', zipBlob.size, 'bytes');
+    }
+
     console.log('[restoreVersion] Downloaded ZIP successfully, size:', zipBlob.size, 'bytes', 'type:', zipBlob.type);
 
 
