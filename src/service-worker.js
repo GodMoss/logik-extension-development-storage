@@ -29,6 +29,28 @@ async function ensureCredentials() {
   }
 }
 
+// Handle restore progress connections
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === 'restore') {
+    console.log('[Service Worker] Restore connection established');
+    port.onDisconnect.addListener(() => {
+      console.log('[Service Worker] Restore connection closed');
+    });
+  }
+});
+
+// Global variable to track the current restore port for sending progress updates
+let currentRestorePort = null;
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === 'restore') {
+    currentRestorePort = port;
+    port.onDisconnect.addListener(() => {
+      currentRestorePort = null;
+    });
+  }
+});
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('[Service Worker] Message received:', request.action);
 
@@ -822,6 +844,10 @@ async function restoreVersion(blueprintName, filename) {
 
     console.log('[restoreVersion] Downloaded ZIP successfully, size:', zipBlob.size, 'bytes', 'type:', zipBlob.type);
 
+    // Send progress update: Step 1 complete
+    if (currentRestorePort) {
+      currentRestorePort.postMessage({ step: 1, status: 'downloading' });
+    }
 
     // Get the Logik API key from storage
     const data = await new Promise((resolve) => {
@@ -921,6 +947,11 @@ async function restoreVersion(blueprintName, filename) {
     const uploadResult = await uploadResponse.json();
     console.log('[restoreVersion] Full upload response:', JSON.stringify(uploadResult, null, 2));
 
+    // Send progress update: Step 2 complete
+    if (currentRestorePort) {
+      currentRestorePort.postMessage({ step: 2, status: 'uploading' });
+    }
+
     const jobId = uploadResult.id;
     console.log('[restoreVersion] Extracted jobId:', jobId);
 
@@ -930,6 +961,11 @@ async function restoreVersion(blueprintName, filename) {
     }
 
     console.log('[restoreVersion] Starting job polling for jobId:', jobId);
+
+    // Send progress update: Step 3 starting
+    if (currentRestorePort) {
+      currentRestorePort.postMessage({ step: 3, status: 'processing' });
+    }
 
     // Poll job status until complete
     const jobUrl = `https://${environment}.test.logik.io/api/admin/v1/job/${jobId}`;

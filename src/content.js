@@ -2560,7 +2560,14 @@ function showRestoreProgress(filename) {
       align-items: center;
       margin: 8px 0;
       font-size: 13px;
-      color: #bbb;
+      color: #666;
+      transition: all 0.3s ease;
+    }
+    .status-step.active {
+      color: #fff;
+    }
+    .status-step.completed {
+      color: #4caf50;
     }
     .step-icon {
       display: inline-block;
@@ -2576,9 +2583,9 @@ function showRestoreProgress(filename) {
     <h3 style="margin: 0 0 8px 0; font-size: 16px; color: #d32f2f;">Restoring Blueprint</h3>
     <div class="restore-spinner"></div>
     <div class="status-text">
-      <div class="status-step"><span class="step-icon">⬇️</span>Downloading from GitHub</div>
-      <div class="status-step"><span class="step-icon">⬆️</span>Uploading to Logik</div>
-      <div class="status-step"><span class="step-icon">⏳</span>Processing import</div>
+      <div class="status-step active" id="step1"><span class="step-icon">⬇️</span>Downloading from GitHub</div>
+      <div class="status-step" id="step2"><span class="step-icon">⬆️</span>Uploading to Logik</div>
+      <div class="status-step" id="step3"><span class="step-icon">⏳</span>Processing import</div>
     </div>
   `;
 
@@ -2586,6 +2593,26 @@ function showRestoreProgress(filename) {
   document.body.appendChild(modal);
 
   return {
+    setStep: (stepNum, status) => {
+      // Mark previous step as completed
+      if (stepNum > 1) {
+        const prevStep = content.querySelector(`#step${stepNum - 1}`);
+        if (prevStep) {
+          prevStep.classList.remove('active');
+          prevStep.classList.add('completed');
+          prevStep.querySelector('.step-icon').textContent = '✓';
+        }
+      }
+
+      // Mark current step as active
+      const currentStep = content.querySelector(`#step${stepNum}`);
+      if (currentStep) {
+        currentStep.classList.add('active');
+        currentStep.classList.remove('completed');
+      }
+
+      console.log('[showRestoreProgress] Updated to step', stepNum);
+    },
     close: () => {
       modal.remove();
       style.remove();
@@ -3024,6 +3051,20 @@ async function handleRestoreVersion(e) {
     // Show progress modal
     const progressModal = showRestoreProgress(filename);
 
+    // Connect to service worker for progress updates
+    const port = chrome.runtime.connect({ name: 'restore' });
+
+    port.onMessage.addListener((message) => {
+      console.log('[Content Script] Progress update:', message);
+      if (message.step === 1) {
+        progressModal.setStep(1, 'downloading');
+      } else if (message.step === 2) {
+        progressModal.setStep(2, 'uploading');
+      } else if (message.step === 3) {
+        progressModal.setStep(3, 'processing');
+      }
+    });
+
     console.log('[Content Script] Sending restore request...');
     const response = await chrome.runtime.sendMessage({
       action: 'restoreVersion',
@@ -3032,10 +3073,12 @@ async function handleRestoreVersion(e) {
     });
 
     if (response.error) {
+      port.disconnect();
       progressModal.close();
       throw new Error(response.error);
     }
 
+    port.disconnect();
     progressModal.close();
     console.log('[Content Script] Restore successful!');
     console.log('[Content Script] Job result:', response.result);
