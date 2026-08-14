@@ -880,6 +880,20 @@ function getStyles() {
       font-size: 11px;
       word-break: break-all;
     }
+    .logik-vc-version-restore {
+      background: none;
+      border: none;
+      color: #666;
+      cursor: pointer;
+      padding: 4px;
+      font-size: 16px;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+      flex-shrink: 0;
+    }
+    .logik-vc-version-restore:hover {
+      opacity: 1;
+    }
     .logik-vc-version-delete {
       background: none;
       border: none;
