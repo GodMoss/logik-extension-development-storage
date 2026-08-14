@@ -2672,6 +2672,36 @@ function showRestoreSuccess(filename, jobResult) {
     .summary-label { color: #aaa; }
     .summary-value { color: #fff; font-weight: 600; }
     .messages-section { margin-top: 20px; }
+    .messages-header {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      margin-bottom: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(211, 47, 47, 0.2);
+    }
+    .messages-header:hover {
+      opacity: 0.8;
+    }
+    .messages-toggle {
+      display: inline-block;
+      margin-right: 8px;
+      transition: transform 0.2s;
+    }
+    .messages-toggle.collapsed {
+      transform: rotate(-90deg);
+    }
+    .messages-content {
+      transition: max-height 0.3s ease, opacity 0.3s ease;
+      max-height: 500px;
+      opacity: 1;
+      overflow: hidden;
+    }
+    .messages-content.collapsed {
+      max-height: 0;
+      opacity: 0;
+    }
     .message-category { margin-top: 12px; }
     .message-category-title { font-size: 12px; font-weight: 700; color: ${primaryColor}; margin: 8px 0 4px 0; text-transform: uppercase; }
     .message-item { background: rgba(0, 0, 0, 0.3); padding: 8px; margin: 4px 0; border-radius: 4px; font-size: 12px; line-height: 1.5; color: #ddd; border-left: 2px solid #666; }
@@ -2758,7 +2788,17 @@ function showRestoreSuccess(filename, jobResult) {
     </p>
 
     ${summaryHTML}
-    ${messagesHTML}
+    ${messagesHTML ? `
+      <div class="messages-section">
+        <div class="messages-header" id="messages-toggle">
+          <span class="messages-toggle">▼</span>
+          <span style="font-size: 12px; font-weight: 700; color: #d32f2f; text-transform: uppercase;">Messages</span>
+        </div>
+        <div class="messages-content" id="messages-content">
+          ${messagesHTML}
+        </div>
+      </div>
+    ` : ''}
 
     <button id="restore-close" style="
       width: 100%;
@@ -2785,6 +2825,18 @@ function showRestoreSuccess(filename, jobResult) {
     modal.remove();
     style.remove();
   });
+
+  // Toggle messages section
+  const messagesToggle = content.querySelector('#messages-toggle');
+  if (messagesToggle) {
+    const messagesContent = content.querySelector('#messages-content');
+    const toggleIcon = messagesToggle.querySelector('.messages-toggle');
+
+    messagesToggle.addEventListener('click', () => {
+      messagesContent.classList.toggle('collapsed');
+      toggleIcon.classList.toggle('collapsed');
+    });
+  }
 
   // Also close when clicking outside the modal
   modal.addEventListener('click', (e) => {
