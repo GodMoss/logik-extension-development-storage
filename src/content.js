@@ -2505,6 +2505,94 @@ async function loadVersionHistory() {
   }
 }
 
+function showRestoreProgress(filename) {
+  // Create modal overlay
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `;
+
+  // Create modal content
+  const content = document.createElement('div');
+  content.style.cssText = `
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(20px);
+    border: 2px solid rgba(211, 47, 47, 0.3);
+    border-radius: 16px;
+    padding: 40px;
+    max-width: 350px;
+    box-shadow: 0 20px 60px rgba(211, 47, 47, 0.2);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    text-align: center;
+  `;
+
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .restore-spinner {
+      display: inline-block;
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(211, 47, 47, 0.2);
+      border-top-color: #d32f2f;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    .status-text {
+      font-size: 14px;
+      color: #999;
+      margin-top: 16px;
+    }
+    .status-step {
+      display: flex;
+      align-items: center;
+      margin: 8px 0;
+      font-size: 13px;
+      color: #bbb;
+    }
+    .step-icon {
+      display: inline-block;
+      width: 20px;
+      text-align: center;
+      margin-right: 8px;
+    }
+  `;
+  document.head.appendChild(style);
+
+  content.innerHTML = `
+    <div style="font-size: 24px; margin-bottom: 16px;">👻</div>
+    <h3 style="margin: 0 0 8px 0; font-size: 16px; color: #d32f2f;">Restoring Blueprint</h3>
+    <div class="restore-spinner"></div>
+    <div class="status-text">
+      <div class="status-step"><span class="step-icon">⬇️</span>Downloading from GitHub</div>
+      <div class="status-step"><span class="step-icon">⬆️</span>Uploading to Logik</div>
+      <div class="status-step"><span class="step-icon">⏳</span>Processing import</div>
+    </div>
+  `;
+
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+
+  return {
+    close: () => {
+      modal.remove();
+      style.remove();
+    }
+  };
+}
+
 function showRestoreSuccess(filename, jobResult) {
   // Create modal overlay
   const modal = document.createElement('div');
@@ -2933,6 +3021,9 @@ async function handleRestoreVersion(e) {
     button.disabled = true;
     button.style.opacity = '0.3';
 
+    // Show progress modal
+    const progressModal = showRestoreProgress(filename);
+
     console.log('[Content Script] Sending restore request...');
     const response = await chrome.runtime.sendMessage({
       action: 'restoreVersion',
@@ -2941,9 +3032,11 @@ async function handleRestoreVersion(e) {
     });
 
     if (response.error) {
+      progressModal.close();
       throw new Error(response.error);
     }
 
+    progressModal.close();
     console.log('[Content Script] Restore successful!');
     console.log('[Content Script] Job result:', response.result);
     showRestoreSuccess(filename, response.result);
