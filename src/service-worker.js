@@ -112,6 +112,46 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     return true;
   }
+
+  if (request.action === 'downloadFile') {
+    console.log('[Service Worker] downloadFile requested for key:', request.key);
+
+    // Retrieve file from IndexedDB and send as base64
+    const db = indexedDB.open('RestoreVersionDB', 1);
+    db.onsuccess = () => {
+      const transaction = db.result.transaction('files', 'readonly');
+      const store = transaction.objectStore('files');
+      const getRequest = store.get(request.key);
+
+      getRequest.onsuccess = () => {
+        const blob = getRequest.result;
+        if (blob) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64 = reader.result.split(',')[1];
+            console.log('[Service Worker] Sending file as base64, length:', base64.length);
+            sendResponse({ data: base64 });
+          };
+          reader.readAsDataURL(blob);
+        } else {
+          console.warn('[Service Worker] File not found in IndexedDB:', request.key);
+          sendResponse({ error: 'File not found' });
+        }
+      };
+
+      getRequest.onerror = () => {
+        console.error('[Service Worker] IndexedDB get error:', getRequest.error);
+        sendResponse({ error: getRequest.error.message });
+      };
+    };
+
+    db.onerror = () => {
+      console.error('[Service Worker] IndexedDB open error:', db.error);
+      sendResponse({ error: db.error.message });
+    };
+
+    return true;
+  }
 });
 
 async function pushVersion(blueprintZipData) {

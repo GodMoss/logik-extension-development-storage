@@ -2905,53 +2905,44 @@ async function handleRestoreVersion(e) {
 
 async function downloadFileFromIndexedDB(key) {
   try {
-    console.log('[Content Script] Attempting to download file with key:', key);
+    console.log('[Content Script] Requesting file download for:', key);
 
-    const db = await new Promise((resolve, reject) => {
-      const request = indexedDB.open('RestoreVersionDB', 1);
-      request.onsuccess = () => {
-        console.log('[Content Script] IndexedDB opened successfully');
-        resolve(request.result);
-      };
-      request.onerror = () => {
-        console.error('[Content Script] IndexedDB open error:', request.error);
-        reject(request.error);
-      };
+    // Request the file from the service worker
+    const response = await chrome.runtime.sendMessage({
+      action: 'downloadFile',
+      key: key
     });
 
-    const transaction = db.transaction('files', 'readonly');
-    const store = transaction.objectStore('files');
+    if (response.error) {
+      console.error('[Content Script] Service worker error:', response.error);
+      return;
+    }
 
-    return new Promise((resolve, reject) => {
-      const getRequest = store.get(key);
+    if (!response.data) {
+      console.warn('[Content Script] No file data received');
+      return;
+    }
 
-      getRequest.onsuccess = () => {
-        const blob = getRequest.result;
-        console.log('[Content Script] Retrieved from IndexedDB - blob:', blob ? blob.type + ' ' + blob.size + ' bytes' : 'null');
+    // Convert base64 to blob
+    const byteCharacters = atob(response.data);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'application/zip' });
 
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = key.replace('github_', '') || 'download.zip';
-          console.log('[Content Script] Creating download link with filename:', a.download);
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-          console.log('[Content Script] File downloaded successfully:', key);
-          resolve();
-        } else {
-          console.warn('[Content Script] File not found in IndexedDB with key:', key);
-          resolve();
-        }
-      };
+    // Download using the working pattern from downloadSingleTable
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = key.replace('github_', '') || 'download.zip';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
 
-      getRequest.onerror = () => {
-        console.error('[Content Script] IndexedDB get error:', getRequest.error);
-        reject(getRequest.error);
-      };
-    });
+    console.log('[Content Script] File downloaded successfully:', key);
   } catch (error) {
     console.error('[Content Script] Failed to download file:', error);
   }
