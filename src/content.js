@@ -2465,7 +2465,7 @@ async function loadVersionHistory() {
             <div class="logik-vc-version-name">${v.name}</div>
           </div>
           <div style="display: flex; gap: 4px;">
-            <button class="logik-vc-version-restore" data-filename="${v.name}" data-sha="${v.sha}" title="Restore version">🧟</button>
+            <button class="logik-vc-version-restore" data-filename="${v.name}" data-sha="${v.sha}" title="Restore version">👻</button>
             <button class="logik-vc-version-delete" data-filename="${v.name}" data-sha="${v.sha}" title="Delete version">⚰️</button>
           </div>
         </div>
@@ -2889,14 +2889,6 @@ async function handleRestoreVersion(e) {
     }
 
     console.log('[Content Script] Restore successful!');
-
-    // Download the GitHub file for inspection (before upload)
-    try {
-      await downloadGitHubFile(blueprintName, filename);
-    } catch (downloadError) {
-      console.warn('[Content Script] Download failed, but restore is proceeding:', downloadError);
-    }
-
     showRestoreSuccess(filename);
   } catch (error) {
     console.error('[Content Script] Restore failed:', error);
