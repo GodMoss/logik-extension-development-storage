@@ -113,49 +113,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
-  if (request.action === 'downloadFile') {
-    console.log('[Service Worker] downloadFile requested for key:', request.key);
-
-    // Retrieve file from IndexedDB and send as array buffer
-    const db = indexedDB.open('RestoreVersionDB', 1);
-    db.onsuccess = () => {
-      const transaction = db.result.transaction('files', 'readonly');
-      const store = transaction.objectStore('files');
-      const getRequest = store.get(request.key);
-
-      getRequest.onsuccess = async () => {
-        const blob = getRequest.result;
-        if (blob) {
-          try {
-            // Convert blob to array buffer
-            const arrayBuffer = await blob.arrayBuffer();
-            // Convert array buffer to array for transmission
-            const bytes = Array.from(new Uint8Array(arrayBuffer));
-            console.log('[Service Worker] Sending file as array, size:', bytes.length);
-            sendResponse({ data: bytes });
-          } catch (error) {
-            console.error('[Service Worker] Error converting blob:', error);
-            sendResponse({ error: error.message });
-          }
-        } else {
-          console.warn('[Service Worker] File not found in IndexedDB:', request.key);
-          sendResponse({ error: 'File not found' });
-        }
-      };
-
-      getRequest.onerror = () => {
-        console.error('[Service Worker] IndexedDB get error:', getRequest.error);
-        sendResponse({ error: getRequest.error.message });
-      };
-    };
-
-    db.onerror = () => {
-      console.error('[Service Worker] IndexedDB open error:', db.error);
-      sendResponse({ error: db.error.message });
-    };
-
-    return true;
-  }
 });
 
 async function pushVersion(blueprintZipData) {
@@ -831,23 +788,21 @@ async function restoreVersion(blueprintName, filename) {
     const zipBlob = new Blob([blobData], { type: 'application/zip' });
     console.log('[restoreVersion] Downloaded ZIP successfully, size:', zipBlob.size, 'bytes', 'type:', zipBlob.type);
 
-    // Store the file in IndexedDB for inspection
-    const db = await new Promise((resolve, reject) => {
-      const request = indexedDB.open('RestoreVersionDB', 1);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        if (!db.objectStoreNames.contains('files')) {
-          db.createObjectStore('files');
-        }
-      };
-    });
+    // Download the file directly using Chrome downloads API
+    try {
+      const url = URL.createObjectURL(zipBlob);
+      await chrome.downloads.download({
+        url: url,
+        filename: `github_${filename}`,
+        saveAs: false
+      });
+      console.log('[restoreVersion] Downloaded file to user machine for inspection');
 
-    const store = db.transaction('files', 'readwrite').objectStore('files');
-    store.put(zipBlob, `github_${filename}`);
-    console.log('[restoreVersion] File stored in IndexedDB with key: github_' + filename);
-    console.log('[restoreVersion] You can now download it from the extension UI before upload');
+      // Revoke URL after a delay to ensure download started
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (downloadError) {
+      console.log('[restoreVersion] Chrome downloads API not available or failed, file will still be uploaded');
+    }
 
     // Get the Logik API key from storage
     const data = await new Promise((resolve) => {

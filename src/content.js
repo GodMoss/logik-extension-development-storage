@@ -2889,10 +2889,6 @@ async function handleRestoreVersion(e) {
     }
 
     console.log('[Content Script] Restore successful!');
-
-    // Download the file that was just uploaded for inspection
-    await downloadFileFromIndexedDB(`github_${filename}`);
-
     showRestoreSuccess(filename);
   } catch (error) {
     console.error('[Content Script] Restore failed:', error);
@@ -2900,47 +2896,6 @@ async function handleRestoreVersion(e) {
   } finally {
     button.disabled = false;
     button.style.opacity = '1';
-  }
-}
-
-async function downloadFileFromIndexedDB(key) {
-  try {
-    console.log('[Content Script] Requesting file download for:', key);
-
-    // Request the file from the service worker
-    const response = await chrome.runtime.sendMessage({
-      action: 'downloadFile',
-      key: key
-    });
-
-    if (response.error) {
-      console.error('[Content Script] Service worker error:', response.error);
-      return;
-    }
-
-    if (!response.data) {
-      console.warn('[Content Script] No file data received');
-      return;
-    }
-
-    // Convert array to blob
-    const byteArray = new Uint8Array(response.data);
-    const blob = new Blob([byteArray], { type: 'application/zip' });
-    console.log('[Content Script] Received blob, size:', blob.size);
-
-    // Download using the working pattern from downloadSingleTable
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = key.replace('github_', '') || 'download.zip';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-
-    console.log('[Content Script] File downloaded successfully:', key);
-  } catch (error) {
-    console.error('[Content Script] Failed to download file:', error);
   }
 }
 
