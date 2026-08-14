@@ -5,13 +5,36 @@
 ### Major Features Implemented
 
 #### 1. Blueprint Version Restore Functionality ✅
-- Implemented complete restore workflow:
-  - Download zip files from GitHub
-  - Upload to Logik via `/a/admin/v2/uploadFile` endpoint
-  - Poll job status via `/api/admin/v1/job/{jobId}` until completion
-- Mixed authentication: session cookies for upload, Bearer token for job polling
-- Manual multipart/form-data construction for service worker compatibility
-- Fixed job status check to match "COMPLETED" response (not "COMPLETE")
+Complete restore workflow implemented and debugged:
+
+**Happy Path:**
+- Download zip files from GitHub using GitHub API with token auth
+- Upload to Logik via `/api/admin/v2/uploadFile` endpoint with Bearer token
+- Poll `/api/admin/v1/job/{jobId}` until status = "COMPLETED"
+- Job imports blueprint automatically
+
+**Debugging Journey:**
+1. **Initial Issue**: Upload succeeds (job created, status COMPLETED), but job result shows `"success": false` with error "Error importing zipped file"
+2. **Investigation**: Confirmed file structure was correct when manually inspected; confirmed same file uploads successfully via Logik UI
+3. **Discovery**: Size mismatch detected:
+   - Service worker downloading: 26534 bytes (type: application/json)
+   - Content script downloading: 18456 bytes (type: application/zip)
+   - Content script's file worked when manually uploaded
+4. **Root Cause**: GitHub API was returning JSON metadata with base64-encoded content, not raw binary
+   - Even with `Accept: application/vnd.github.v3.raw` header, GitHub returned JSON
+   - Service worker was sending 26534-byte JSON as a zip file to Logik
+   - Logik rejected the malformed zip
+5. **Resolution**: Added detection and base64 decoding in service worker:
+   - Check response Content-Type header
+   - If JSON: parse metadata, decode base64 content field → correct 18456-byte zip
+   - If raw: use directly
+   - Now sends correct file to Logik ✅
+
+**Technical Details:**
+- FormData used for upload (browser handles multipart encoding)
+- Bearer token authentication for `/api/` endpoints
+- Base64 decoding: `atob()` for text, `Uint8Array` for binary conversion
+- Single-pass job polling with 120-second timeout (1 second intervals)
 
 #### 2. Resurrection-Themed Success Modal ✅
 - Custom modal replacing generic alerts
