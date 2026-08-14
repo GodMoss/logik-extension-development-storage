@@ -2574,8 +2574,8 @@ function showRestoreSuccess(filename, jobResult) {
 
   console.log('[showRestoreSuccess] jobResult:', jobResult);
 
-  if (jobResult && jobResult.result) {
-    const counts = jobResult.result.counts;
+  if (jobResult && jobResult.result && jobResult.result.result) {
+    const counts = jobResult.result.result.counts;
     if (counts) {
       summaryHTML = `
         <div class="import-summary">
@@ -2600,9 +2600,9 @@ function showRestoreSuccess(filename, jobResult) {
     }
 
     // Organize messages by category
-    if (jobResult.result.messages && jobResult.result.messages.length > 0) {
+    if (jobResult.result.result.messages && jobResult.result.result.messages.length > 0) {
       const messagesByCategory = {};
-      jobResult.result.messages.forEach(msg => {
+      jobResult.result.result.messages.forEach(msg => {
         const category = msg.category || 'other';
         if (!messagesByCategory[category]) {
           messagesByCategory[category] = [];
