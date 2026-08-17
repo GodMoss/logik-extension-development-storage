@@ -1,6 +1,83 @@
 // Inject side panel UI into the page when DOM is ready
 console.log('[Content Script] Logik Blueprint VC loaded');
 
+// Configuration context detection
+let currentConfigContext = null;
+
+// Intercept fetch and XHR to detect configuration loads
+(function() {
+  console.log('[Content Script] Setting up request interception (fetch + XHR)');
+
+  // Intercept Fetch
+  const originalFetch = window.fetch;
+  window.fetch = function(...args) {
+    const [resource] = args;
+    const url = typeof resource === 'string' ? resource : resource.url;
+
+    if (url && url.includes('/c?') && url.includes('logExecution=false') && url.includes('interactive=true')) {
+      return originalFetch.apply(this, args).then(async (response) => {
+        const clonedResponse = response.clone();
+        try {
+          const data = await clonedResponse.json();
+          if (data.uuid) {
+            const tenantMatch = url.match(/https:\/\/([^.]+)/);
+            const sectorMatch = url.match(/\.([^.]+)\.logik\.io/);
+            currentConfigContext = { uuid: data.uuid, tenant: tenantMatch?.[1] || null, sector: sectorMatch?.[1] || null };
+            console.log('[Content Script] Configuration detected:', currentConfigContext);
+            updateFieldValuesTabVisibility();
+          }
+        } catch (e) {}
+        return response;
+      });
+    }
+
+    return originalFetch.apply(this, args);
+  };
+
+  // Intercept XMLHttpRequest
+  const originalXHROpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method, url) {
+    if (url && url.includes('/c?') && url.includes('logExecution=false') && url.includes('interactive=true')) {
+      const originalSend = this.send;
+      this.send = function(...args) {
+        this.addEventListener('load', function() {
+          try {
+            const data = JSON.parse(this.responseText);
+            if (data.uuid) {
+              const fullUrl = url;
+              const tenantMatch = fullUrl.match(/https:\/\/([^.]+)/);
+              const sectorMatch = fullUrl.match(/\.([^.]+)\.logik\.io/);
+              currentConfigContext = { uuid: data.uuid, tenant: tenantMatch?.[1] || null, sector: sectorMatch?.[1] || null };
+              console.log('[Content Script] Configuration detected via XHR:', currentConfigContext);
+              updateFieldValuesTabVisibility();
+            }
+          } catch (e) {}
+        });
+        return originalSend.apply(this, args);
+      };
+    }
+
+    return originalXHROpen.apply(this, arguments);
+  };
+})();
+
+function updateFieldValuesTabVisibility() {
+  const fieldValuesTab = document.querySelector('[data-tab="field-values"]');
+  const fieldValuesContent = document.getElementById('field-values-tab');
+  const uuidInput = document.getElementById('logik-vc-runtime-uuid');
+
+  if (!fieldValuesTab || !fieldValuesContent) return;
+
+  if (currentConfigContext) {
+    fieldValuesTab.style.display = 'block';
+    if (uuidInput) {
+      uuidInput.value = currentConfigContext.uuid;
+    }
+  } else {
+    fieldValuesTab.style.display = 'none';
+  }
+}
+
 /**
  * THEME CONFIGURATION
  *
@@ -275,6 +352,9 @@ function injectSidePanel() {
 
     console.log('[Content Script] Panel HTML injected');
 
+    // Update Field Values tab visibility based on current config context
+    updateFieldValuesTabVisibility();
+
     // Make sure panel starts closed (remove any 'open' class)
     panel = document.getElementById('logik-blueprint-vc-panel');
     if (panel) {
@@ -347,10 +427,10 @@ function getPanelHTML() {
 
         <div class="logik-vc-content">
           <!-- Field Values Tab -->
-          <div id="field-values-tab" class="logik-vc-tab-content">
+          <div id="field-values-tab" class="logik-vc-tab-content" style="display: none;">
             <div class="logik-vc-section">
-              <label for="logik-vc-runtime-uuid" style="display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: #333;">Configuration UUID:</label>
-              <input type="text" id="logik-vc-runtime-uuid" class="logik-vc-input" placeholder="Paste configuration UUID..." style="margin-bottom: 12px;">
+              <label for="logik-vc-runtime-uuid" style="display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: #333;">Configuration UUID (auto-detected):</label>
+              <input type="text" id="logik-vc-runtime-uuid" class="logik-vc-input" placeholder="Configuration UUID will appear here..." style="margin-bottom: 12px;" readonly>
               <label for="logik-vc-runtime-key" style="display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: #333;">Runtime API Key:</label>
               <input type="password" id="logik-vc-runtime-key" class="logik-vc-input" placeholder="Paste runtime API key..." style="margin-bottom: 12px;">
               <label for="logik-vc-runtime-field" style="display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: #333;">Field Name:</label>
