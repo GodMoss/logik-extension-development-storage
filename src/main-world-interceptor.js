@@ -1,5 +1,9 @@
 // Main world interceptor — runs in MAIN world to catch Logik's actual fetch/XHR calls
+console.log('[Main World] Script starting...');
+
 const uuidPattern = /\/(?:c|api)\/([a-f0-9\-]{36})\//;
+let fetchCallCount = 0;
+let xhrCallCount = 0;
 
 function announce(uuid, url) {
   const tenantMatch = url.match(/https:\/\/([^.]+)/);
@@ -12,19 +16,29 @@ function announce(uuid, url) {
 
 const originalFetch = window.fetch;
 window.fetch = function(...args) {
+  fetchCallCount++;
   const url = typeof args[0] === 'string' ? args[0] : args[0]?.url;
-  const match = url?.match(uuidPattern);
-  if (match) {
-    announce(match[1], url);
+  if (url) {
+    console.log('[Main World] Fetch call #' + fetchCallCount + ':', url.substring(Math.max(0, url.length - 80)));
+    const match = url.match(uuidPattern);
+    if (match) {
+      console.log('[Main World] ✓ UUID pattern matched!');
+      announce(match[1], url);
+    }
   }
   return originalFetch.apply(this, args);
 };
 
 const originalOpen = XMLHttpRequest.prototype.open;
 XMLHttpRequest.prototype.open = function(method, url, ...rest) {
-  const match = typeof url === 'string' ? url.match(uuidPattern) : null;
-  if (match) {
-    announce(match[1], url);
+  xhrCallCount++;
+  if (typeof url === 'string') {
+    console.log('[Main World] XHR call #' + xhrCallCount + ' (' + method + '):', url.substring(Math.max(0, url.length - 80)));
+    const match = url.match(uuidPattern);
+    if (match) {
+      console.log('[Main World] ✓ UUID pattern matched!');
+      announce(match[1], url);
+    }
   }
   return originalOpen.call(this, method, url, ...rest);
 };
