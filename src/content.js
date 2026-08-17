@@ -63,10 +63,12 @@ function tryDetectUUID() {
     const [resource] = args;
     const url = typeof resource === 'string' ? resource : resource.url;
 
-    if (url && url.includes('/c/')) {
+    if (url && typeof url === 'string' && url.includes('/c/')) {
+      console.log('[Content Script] Fetch to /c/ URL:', url.substring(Math.max(0, url.length - 80)));
       const match = url.match(uuidPattern);
       if (match) {
         const uuid = match[1];
+        console.log('[Content Script] UUID matched from URL:', uuid);
         if (!currentConfigContext || currentConfigContext.uuid !== uuid) {
           const tenantMatch = url.match(/https:\/\/([^.]+)/);
           const sectorMatch = url.match(/\.([^.]+)\.logik\.io/);
@@ -74,6 +76,8 @@ function tryDetectUUID() {
           console.log('[Content Script] Configuration UUID detected from fetch URL:', currentConfigContext);
           updateFieldValuesTabVisibility();
         }
+      } else {
+        console.log('[Content Script] Fetch URL matches /c/ but UUID regex did not match');
       }
     }
 
@@ -83,10 +87,12 @@ function tryDetectUUID() {
   // Intercept XMLHttpRequest
   const originalXHROpen = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function(method, url) {
-    if (url && url.includes('/c/')) {
+    if (url && typeof url === 'string' && url.includes('/c/')) {
+      console.log('[Content Script] XHR to /c/ URL:', url.substring(Math.max(0, url.length - 80)));
       const match = url.match(uuidPattern);
       if (match) {
         const uuid = match[1];
+        console.log('[Content Script] UUID matched from URL:', uuid);
         if (!currentConfigContext || currentConfigContext.uuid !== uuid) {
           const tenantMatch = url.match(/https:\/\/([^.]+)/);
           const sectorMatch = url.match(/\.([^.]+)\.logik\.io/);
@@ -94,6 +100,8 @@ function tryDetectUUID() {
           console.log('[Content Script] Configuration UUID detected from XHR URL:', currentConfigContext);
           updateFieldValuesTabVisibility();
         }
+      } else {
+        console.log('[Content Script] XHR URL matches /c/ but UUID regex did not match');
       }
     }
 
