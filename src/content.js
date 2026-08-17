@@ -52,10 +52,28 @@ function updateFieldValuesTabVisibility() {
 
   if (currentConfigContext) {
     console.log('[Content Script] Showing Field Values tab, UUID:', currentConfigContext.uuid);
-    fieldValuesTab.style.display = 'block';
+    const wasHidden = fieldValuesTab.style.display === 'none';
+
+    fieldValuesTab.style.display = '';
+    // Clear the inline display:none set in the initial HTML so the
+    // .logik-vc-tab-content / .logik-vc-tab-active CSS classes can control visibility —
+    // an inline style otherwise always wins over the class-based rule.
+    fieldValuesContent.style.display = '';
+
     if (uuidInput) {
       uuidInput.value = currentConfigContext.uuid;
       console.log('[Content Script] UUID input updated');
+    }
+
+    // Auto-select the Field Values tab the first time it becomes available
+    if (wasHidden) {
+      const panel = document.getElementById('logik-blueprint-vc-panel');
+      if (panel) {
+        panel.querySelectorAll('.logik-vc-tab-btn').forEach(b => b.classList.remove('logik-vc-tab-active'));
+        panel.querySelectorAll('.logik-vc-tab-content').forEach(t => t.classList.remove('logik-vc-tab-active'));
+        fieldValuesTab.classList.add('logik-vc-tab-active');
+        fieldValuesContent.classList.add('logik-vc-tab-active');
+      }
     }
   } else {
     console.log('[Content Script] No config context, hiding Field Values tab');
