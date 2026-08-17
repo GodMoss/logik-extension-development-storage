@@ -29,18 +29,27 @@ window.fetch = function(...args) {
   return originalFetch.apply(this, args);
 };
 
+console.log('[Main World] About to patch XMLHttpRequest.prototype.open');
 const originalOpen = XMLHttpRequest.prototype.open;
+console.log('[Main World] originalOpen saved:', typeof originalOpen);
+
 XMLHttpRequest.prototype.open = function(method, url, ...rest) {
   xhrCallCount++;
-  if (typeof url === 'string') {
-    console.log('[Main World] XHR call #' + xhrCallCount + ' (' + method + '):', url.substring(Math.max(0, url.length - 80)));
-    const match = url.match(uuidPattern);
-    if (match) {
-      console.log('[Main World] ✓ UUID pattern matched!');
-      announce(match[1], url);
+  try {
+    if (typeof url === 'string') {
+      console.log('[Main World] XHR call #' + xhrCallCount + ' (' + method + '):', url.substring(Math.max(0, url.length - 80)));
+      const match = url.match(uuidPattern);
+      if (match) {
+        console.log('[Main World] ✓ UUID pattern matched!');
+        announce(match[1], url);
+      }
     }
+  } catch (e) {
+    console.error('[Main World] Error in XHR interception:', e);
   }
   return originalOpen.call(this, method, url, ...rest);
 };
+
+console.log('[Main World] XMLHttpRequest.prototype.open patched');
 
 console.log('[Main World] Fetch/XHR interception active');
