@@ -339,12 +339,27 @@ function getPanelHTML() {
 
         <!-- Tab Navigation -->
         <div class="logik-vc-tabs" id="logik-vc-main-tabs">
+          <button class="logik-vc-tab-btn" data-tab="field-values">Field Values</button>
           <button class="logik-vc-tab-btn ${isTransactionPage ? '' : 'logik-vc-tab-active'}" data-tab="version-control" ${isTransactionPage ? 'style="display: none;"' : ''}>Version Control</button>
           <button class="logik-vc-tab-btn ${isTransactionPage ? 'logik-vc-tab-active' : ''}" data-tab="rules">Rules</button>
           <button class="logik-vc-tab-btn" data-tab="tables" id="logik-vc-tables-tab-btn" style="display: none;">Tables</button>
         </div>
 
         <div class="logik-vc-content">
+          <!-- Field Values Tab -->
+          <div id="field-values-tab" class="logik-vc-tab-content">
+            <div class="logik-vc-section">
+              <label for="logik-vc-runtime-uuid" style="display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: #333;">Configuration UUID:</label>
+              <input type="text" id="logik-vc-runtime-uuid" class="logik-vc-input" placeholder="Paste configuration UUID..." style="margin-bottom: 12px;">
+              <label for="logik-vc-runtime-key" style="display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: #333;">Runtime API Key:</label>
+              <input type="password" id="logik-vc-runtime-key" class="logik-vc-input" placeholder="Paste runtime API key..." style="margin-bottom: 12px;">
+              <label for="logik-vc-runtime-field" style="display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: #333;">Field Name:</label>
+              <input type="text" id="logik-vc-runtime-field" class="logik-vc-input" placeholder="Enter field variable name..." style="margin-bottom: 12px;">
+              <button id="logik-vc-runtime-search" class="logik-vc-button" style="width: 100%; margin-bottom: 12px;">Search Field</button>
+              <div id="logik-vc-runtime-result" style="margin-top: 12px;"></div>
+            </div>
+          </div>
+
           <!-- Version Control Tab -->
           <div id="version-control-tab" class="logik-vc-tab-content ${isTransactionPage ? '' : 'logik-vc-tab-active'}">
             <div class="logik-vc-section">
@@ -1579,6 +1594,11 @@ function setupPanelListeners() {
     });
   });
 
+  // Field Values search button
+  const runtimeSearchBtn = panel.querySelector('#logik-vc-runtime-search');
+  if (runtimeSearchBtn) {
+    runtimeSearchBtn.addEventListener('click', searchRuntimeField);
+  }
 
   // Handle Tables tab visibility based on URL
   handleTablesTabVisibility();
@@ -2845,6 +2865,64 @@ function showRestoreSuccess(filename, jobResult) {
       style.remove();
     }
   });
+}
+
+async function searchRuntimeField() {
+  const panel = document.getElementById('logik-blueprint-vc-panel');
+  const uuid = panel.querySelector('#logik-vc-runtime-uuid').value.trim();
+  const runtimeKey = panel.querySelector('#logik-vc-runtime-key').value.trim();
+  const fieldName = panel.querySelector('#logik-vc-runtime-field').value.trim();
+  const resultDiv = panel.querySelector('#logik-vc-runtime-result');
+
+  if (!uuid || !runtimeKey || !fieldName) {
+    resultDiv.innerHTML = '<div style="color: #d32f2f; padding: 12px; background: rgba(211, 47, 47, 0.1); border-radius: 4px; font-size: 12px;">⚠️ Please fill in all fields.</div>';
+    return;
+  }
+
+  resultDiv.innerHTML = '<div style="padding: 12px; color: #999; font-size: 12px;">Searching...</div>';
+
+  try {
+    const hostname = new URL(window.location.href).hostname;
+    const parts = hostname.split('.');
+    const tenant = parts[0];
+    const sector = parts[1];
+    const origin = `https://${hostname}/`;
+
+    const response = await fetch(
+      `https://${tenant}.${sector}.logik.io/api/${uuid}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${runtimeKey}`,
+          'Accept': 'application/vnd.logik.cfg-v2+json',
+          'Origin': origin
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const config = await response.json();
+    const field = config.fields.find(f => f.variableName === fieldName);
+
+    if (field) {
+      const value = JSON.stringify(field.value).substring(0, 200);
+      resultDiv.innerHTML = `
+        <div style="background: rgba(76, 175, 80, 0.1); border-left: 3px solid #4caf50; padding: 12px; border-radius: 4px;">
+          <div style="font-size: 12px; color: #4caf50; font-weight: 600; margin-bottom: 6px;">✓ Found</div>
+          <div style="font-family: monospace; font-size: 11px; color: #333; word-break: break-all;">
+            <strong>${field.variableName}:</strong> ${value}
+          </div>
+        </div>
+      `;
+    } else {
+      resultDiv.innerHTML = '<div style="color: #d32f2f; padding: 12px; background: rgba(211, 47, 47, 0.1); border-radius: 4px; font-size: 12px;">✗ Field not found</div>';
+    }
+  } catch (error) {
+    resultDiv.innerHTML = `<div style="color: #d32f2f; padding: 12px; background: rgba(211, 47, 47, 0.1); border-radius: 4px; font-size: 12px;">⚠️ Error: ${error.message}</div>`;
+  }
 }
 
 function showDeleteConfirmation(filename) {
