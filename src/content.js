@@ -1,17 +1,38 @@
 // Inject side panel UI into the page when DOM is ready
-console.log('[Content Script] Logik Blueprint VC loaded');
+console.log('[Content Script] Logik Blueprint VC loaded, isTopFrame:', window === window.top);
 
 // Configuration context detection
 let currentConfigContext = null;
+const isTopFrame = window === window.top;
 
-// Listen for UUID detection from main-world interceptor
+// Listen for UUID detection from main-world interceptor (fires in whichever frame the
+// configurator actually runs in — may or may not be the top frame)
 document.addEventListener('logik-vc-uuid-detected', (e) => {
   if (!currentConfigContext || currentConfigContext.uuid !== e.detail.uuid) {
     currentConfigContext = e.detail;
     console.log('[Content Script] UUID received from main world:', currentConfigContext);
-    updateFieldValuesTabVisibility();
+    if (isTopFrame) {
+      updateFieldValuesTabVisibility();
+    } else {
+      // Panel UI lives in the top frame (e.g. testFrame.html) — relay across the boundary
+      console.log('[Content Script] Relaying UUID to top frame via postMessage');
+      window.parent.postMessage({ type: 'logik-vc-uuid-relay', detail: e.detail }, '*');
+    }
   }
 });
+
+// Only the top frame renders the panel UI, so only it needs to listen for the relay
+if (isTopFrame) {
+  window.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'logik-vc-uuid-relay') {
+      if (!currentConfigContext || currentConfigContext.uuid !== event.data.detail.uuid) {
+        currentConfigContext = event.data.detail;
+        console.log('[Content Script] UUID received via postMessage relay:', currentConfigContext);
+        updateFieldValuesTabVisibility();
+      }
+    }
+  });
+}
 
 function updateFieldValuesTabVisibility() {
   console.log('[Content Script] updateFieldValuesTabVisibility called');
@@ -205,30 +226,37 @@ function isOnTablesPage() {
 
 let currentPageType = null;
 
-if (document.body) {
-  injectSidePanel();
-} else {
-  document.addEventListener('DOMContentLoaded', injectSidePanel);
+// Panel UI only renders in the top frame — nested iframes (e.g. the Test Frame's inner
+// configurator) only need the UUID-detection listener registered above.
+if (isTopFrame) {
+  if (document.body) {
+    injectSidePanel();
+  } else {
+    document.addEventListener('DOMContentLoaded', injectSidePanel);
+  }
 }
 
-// Track URL changes with polling (for SPA-style navigation)
-let lastUrl = window.location.pathname;
+// Track URL changes with polling (for SPA-style navigation) — top frame only, same reasoning
+// as the panel injection above.
+if (isTopFrame) {
+  let lastUrl = window.location.pathname;
 
-// Listen for popstate events (back/forward buttons)
-window.addEventListener('popstate', () => {
-  console.log('[Content Script] popstate event - URL changed');
-  checkAndUpdatePanel();
-});
-
-// Poll for URL changes (handles SPA navigation)
-setInterval(() => {
-  const currentUrl = window.location.pathname;
-  if (currentUrl !== lastUrl) {
-    console.log('[Content Script] URL changed from', lastUrl, 'to', currentUrl);
-    lastUrl = currentUrl;
+  // Listen for popstate events (back/forward buttons)
+  window.addEventListener('popstate', () => {
+    console.log('[Content Script] popstate event - URL changed');
     checkAndUpdatePanel();
-  }
-}, 500); // Check every 500ms
+  });
+
+  // Poll for URL changes (handles SPA navigation)
+  setInterval(() => {
+    const currentUrl = window.location.pathname;
+    if (currentUrl !== lastUrl) {
+      console.log('[Content Script] URL changed from', lastUrl, 'to', currentUrl);
+      lastUrl = currentUrl;
+      checkAndUpdatePanel();
+    }
+  }, 500); // Check every 500ms
+}
 
 function checkAndUpdatePanel() {
   const newPageType = isOnBlueprintListPage() ? 'blueprints' : 'versions';

@@ -19,7 +19,8 @@
       "matches": [
         "https://*.logik.io/*"
       ],
-      "js": ["src/content.js"]
+      "js": ["src/content.js"],
+      "all_frames": true
     },
     {
       "matches": [
@@ -27,7 +28,8 @@
       ],
       "js": ["src/main-world-interceptor.js"],
       "world": "MAIN",
-      "run_at": "document_start"
+      "run_at": "document_start",
+      "all_frames": true
     }
   ],
   "web_accessible_resources": [
