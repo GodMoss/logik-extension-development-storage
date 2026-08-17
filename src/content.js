@@ -44,11 +44,13 @@ let currentConfigContext = null;
   const originalXHROpen = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function(method, url) {
     if (url && url.includes('/c?') && url.includes('logExecution=false') && url.includes('interactive=true')) {
+      console.log('[Content Script] Intercepted XHR /c? request:', url);
       const originalSend = this.send;
       this.send = function(...args) {
         this.addEventListener('load', function() {
           try {
             const data = JSON.parse(this.responseText);
+            console.log('[Content Script] XHR Response data keys:', Object.keys(data));
             if (data.uuid) {
               const fullUrl = url;
               const tenantMatch = fullUrl.match(/https:\/\/([^.]+)/);
@@ -56,8 +58,12 @@ let currentConfigContext = null;
               currentConfigContext = { uuid: data.uuid, tenant: tenantMatch?.[1] || null, sector: sectorMatch?.[1] || null };
               console.log('[Content Script] Configuration detected via XHR:', currentConfigContext);
               updateFieldValuesTabVisibility();
+            } else {
+              console.log('[Content Script] XHR response has no UUID');
             }
-          } catch (e) {}
+          } catch (e) {
+            console.error('[Content Script] Error parsing XHR response:', e);
+          }
         });
         return originalSend.apply(this, args);
       };
