@@ -20,6 +20,14 @@
         "https://*.logik.io/*"
       ],
       "js": ["src/content.js"]
+    },
+    {
+      "matches": [
+        "https://*.logik.io/*"
+      ],
+      "js": ["src/main-world-interceptor.js"],
+      "world": "MAIN",
+      "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [

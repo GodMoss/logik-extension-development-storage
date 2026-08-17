@@ -3,121 +3,15 @@ console.log('[Content Script] Logik Blueprint VC loaded');
 
 // Configuration context detection
 let currentConfigContext = null;
-let uuidDetectionAttempts = 0;
 
-// Try to detect UUID from various sources
-function tryDetectUUID() {
-  uuidDetectionAttempts++;
-  const uuidPattern = /([a-f0-9\-]{36})/;
-
-  // Try to find UUID in window object
-  if (window.logikConfig && window.logikConfig.uuid) {
-    const uuid = window.logikConfig.uuid;
-    const tenantMatch = window.location.hostname.match(/([^.]+)/);
-    const sectorMatch = window.location.hostname.match(/\.([^.]+)\.logik\.io/);
-    currentConfigContext = { uuid, tenant: tenantMatch?.[1] || null, sector: sectorMatch?.[1] || null };
-    console.log('[Content Script] UUID detected from window.logikConfig:', currentConfigContext);
+// Listen for UUID detection from main-world interceptor
+document.addEventListener('logik-vc-uuid-detected', (e) => {
+  if (!currentConfigContext || currentConfigContext.uuid !== e.detail.uuid) {
+    currentConfigContext = e.detail;
+    console.log('[Content Script] UUID received from main world:', currentConfigContext);
     updateFieldValuesTabVisibility();
-    return true;
   }
-
-  // Try to find UUID in data attributes on the page
-  const dataElement = document.querySelector('[data-uuid]');
-  if (dataElement) {
-    const uuid = dataElement.getAttribute('data-uuid');
-    const tenantMatch = window.location.hostname.match(/([^.]+)/);
-    const sectorMatch = window.location.hostname.match(/\.([^.]+)\.logik\.io/);
-    currentConfigContext = { uuid, tenant: tenantMatch?.[1] || null, sector: sectorMatch?.[1] || null };
-    console.log('[Content Script] UUID detected from data attribute:', currentConfigContext);
-    updateFieldValuesTabVisibility();
-    return true;
-  }
-
-  // Try to find UUID in localStorage
-  const storedUUID = sessionStorage.getItem('logikConfigUUID') || localStorage.getItem('logikConfigUUID');
-  if (storedUUID) {
-    const tenantMatch = window.location.hostname.match(/([^.]+)/);
-    const sectorMatch = window.location.hostname.match(/\.([^.]+)\.logik\.io/);
-    currentConfigContext = { uuid: storedUUID, tenant: tenantMatch?.[1] || null, sector: sectorMatch?.[1] || null };
-    console.log('[Content Script] UUID detected from storage:', currentConfigContext);
-    updateFieldValuesTabVisibility();
-    return true;
-  }
-
-  if (uuidDetectionAttempts <= 10) {
-    console.log(`[Content Script] UUID detection attempt ${uuidDetectionAttempts}, retrying...`);
-  }
-
-  return false;
-}
-
-// Intercept fetch and XHR to detect configuration loads from URL pattern /c/{uuid}/
-(function() {
-  console.log('[Content Script] Setting up request interception to extract UUID from URLs');
-
-  const uuidPattern = /\/c\/([a-f0-9\-]{36})\//;
-
-  // Intercept Fetch
-  const originalFetch = window.fetch;
-  window.fetch = function(...args) {
-    const [resource] = args;
-    const url = typeof resource === 'string' ? resource : resource.url;
-
-    if (url && typeof url === 'string' && url.includes('/c/')) {
-      console.log('[Content Script] Fetch to /c/ URL:', url.substring(Math.max(0, url.length - 80)));
-      const match = url.match(uuidPattern);
-      if (match) {
-        const uuid = match[1];
-        console.log('[Content Script] UUID matched from URL:', uuid);
-        if (!currentConfigContext || currentConfigContext.uuid !== uuid) {
-          const tenantMatch = url.match(/https:\/\/([^.]+)/);
-          const sectorMatch = url.match(/\.([^.]+)\.logik\.io/);
-          currentConfigContext = { uuid, tenant: tenantMatch?.[1] || null, sector: sectorMatch?.[1] || null };
-          console.log('[Content Script] Configuration UUID detected from fetch URL:', currentConfigContext);
-          updateFieldValuesTabVisibility();
-        }
-      } else {
-        console.log('[Content Script] Fetch URL matches /c/ but UUID regex did not match');
-      }
-    }
-
-    return originalFetch.apply(this, args);
-  };
-
-  // Intercept XMLHttpRequest
-  const originalXHROpen = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function(method, url) {
-    if (url && typeof url === 'string' && url.includes('/c/')) {
-      console.log('[Content Script] XHR to /c/ URL:', url.substring(Math.max(0, url.length - 80)));
-      const match = url.match(uuidPattern);
-      if (match) {
-        const uuid = match[1];
-        console.log('[Content Script] UUID matched from URL:', uuid);
-        if (!currentConfigContext || currentConfigContext.uuid !== uuid) {
-          const tenantMatch = url.match(/https:\/\/([^.]+)/);
-          const sectorMatch = url.match(/\.([^.]+)\.logik\.io/);
-          currentConfigContext = { uuid, tenant: tenantMatch?.[1] || null, sector: sectorMatch?.[1] || null };
-          console.log('[Content Script] Configuration UUID detected from XHR URL:', currentConfigContext);
-          updateFieldValuesTabVisibility();
-        }
-      } else {
-        console.log('[Content Script] XHR URL matches /c/ but UUID regex did not match');
-      }
-    }
-
-    return originalXHROpen.apply(this, arguments);
-  };
-})();
-
-// Poll for UUID detection every 100ms for up to 5 seconds
-const uuidDetectionInterval = setInterval(() => {
-  if (tryDetectUUID()) {
-    clearInterval(uuidDetectionInterval);
-  } else if (uuidDetectionAttempts > 50) {
-    console.log('[Content Script] UUID detection polling stopped after 50 attempts');
-    clearInterval(uuidDetectionInterval);
-  }
-}, 100);
+});
 
 function updateFieldValuesTabVisibility() {
   console.log('[Content Script] updateFieldValuesTabVisibility called');
