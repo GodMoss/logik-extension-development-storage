@@ -4,9 +4,11 @@ console.log('[Content Script] Logik Blueprint VC loaded');
 // Configuration context detection
 let currentConfigContext = null;
 
-// Intercept fetch and XHR to detect configuration loads
+// Intercept fetch and XHR to detect configuration loads from URL pattern /c/{uuid}/
 (function() {
-  console.log('[Content Script] Setting up request interception (fetch + XHR)');
+  console.log('[Content Script] Setting up request interception to extract UUID from URLs');
+
+  const uuidPattern = /\/c\/([a-f0-9\-]{36})\//;
 
   // Intercept Fetch
   const originalFetch = window.fetch;
@@ -14,27 +16,18 @@ let currentConfigContext = null;
     const [resource] = args;
     const url = typeof resource === 'string' ? resource : resource.url;
 
-    if (url && url.includes('/c?') && url.includes('logExecution=false') && url.includes('interactive=true')) {
-      console.log('[Content Script] Intercepted /c? request:', url);
-      return originalFetch.apply(this, args).then(async (response) => {
-        const clonedResponse = response.clone();
-        try {
-          const data = await clonedResponse.json();
-          console.log('[Content Script] Response data keys:', Object.keys(data));
-          if (data.uuid) {
-            const tenantMatch = url.match(/https:\/\/([^.]+)/);
-            const sectorMatch = url.match(/\.([^.]+)\.logik\.io/);
-            currentConfigContext = { uuid: data.uuid, tenant: tenantMatch?.[1] || null, sector: sectorMatch?.[1] || null };
-            console.log('[Content Script] Configuration detected:', currentConfigContext);
-            updateFieldValuesTabVisibility();
-          } else {
-            console.log('[Content Script] No UUID in response');
-          }
-        } catch (e) {
-          console.error('[Content Script] Error parsing response:', e);
+    if (url && url.includes('/c/')) {
+      const match = url.match(uuidPattern);
+      if (match) {
+        const uuid = match[1];
+        if (!currentConfigContext || currentConfigContext.uuid !== uuid) {
+          const tenantMatch = url.match(/https:\/\/([^.]+)/);
+          const sectorMatch = url.match(/\.([^.]+)\.logik\.io/);
+          currentConfigContext = { uuid, tenant: tenantMatch?.[1] || null, sector: sectorMatch?.[1] || null };
+          console.log('[Content Script] Configuration UUID detected from fetch URL:', currentConfigContext);
+          updateFieldValuesTabVisibility();
         }
-        return response;
-      });
+      }
     }
 
     return originalFetch.apply(this, args);
@@ -43,30 +36,18 @@ let currentConfigContext = null;
   // Intercept XMLHttpRequest
   const originalXHROpen = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function(method, url) {
-    if (url && url.includes('/c?') && url.includes('logExecution=false') && url.includes('interactive=true')) {
-      console.log('[Content Script] Intercepted XHR /c? request:', url);
-      const originalSend = this.send;
-      this.send = function(...args) {
-        this.addEventListener('load', function() {
-          try {
-            const data = JSON.parse(this.responseText);
-            console.log('[Content Script] XHR Response data keys:', Object.keys(data));
-            if (data.uuid) {
-              const fullUrl = url;
-              const tenantMatch = fullUrl.match(/https:\/\/([^.]+)/);
-              const sectorMatch = fullUrl.match(/\.([^.]+)\.logik\.io/);
-              currentConfigContext = { uuid: data.uuid, tenant: tenantMatch?.[1] || null, sector: sectorMatch?.[1] || null };
-              console.log('[Content Script] Configuration detected via XHR:', currentConfigContext);
-              updateFieldValuesTabVisibility();
-            } else {
-              console.log('[Content Script] XHR response has no UUID');
-            }
-          } catch (e) {
-            console.error('[Content Script] Error parsing XHR response:', e);
-          }
-        });
-        return originalSend.apply(this, args);
-      };
+    if (url && url.includes('/c/')) {
+      const match = url.match(uuidPattern);
+      if (match) {
+        const uuid = match[1];
+        if (!currentConfigContext || currentConfigContext.uuid !== uuid) {
+          const tenantMatch = url.match(/https:\/\/([^.]+)/);
+          const sectorMatch = url.match(/\.([^.]+)\.logik\.io/);
+          currentConfigContext = { uuid, tenant: tenantMatch?.[1] || null, sector: sectorMatch?.[1] || null };
+          console.log('[Content Script] Configuration UUID detected from XHR URL:', currentConfigContext);
+          updateFieldValuesTabVisibility();
+        }
+      }
     }
 
     return originalXHROpen.apply(this, arguments);
