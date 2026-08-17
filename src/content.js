@@ -15,18 +15,24 @@ let currentConfigContext = null;
     const url = typeof resource === 'string' ? resource : resource.url;
 
     if (url && url.includes('/c?') && url.includes('logExecution=false') && url.includes('interactive=true')) {
+      console.log('[Content Script] Intercepted /c? request:', url);
       return originalFetch.apply(this, args).then(async (response) => {
         const clonedResponse = response.clone();
         try {
           const data = await clonedResponse.json();
+          console.log('[Content Script] Response data keys:', Object.keys(data));
           if (data.uuid) {
             const tenantMatch = url.match(/https:\/\/([^.]+)/);
             const sectorMatch = url.match(/\.([^.]+)\.logik\.io/);
             currentConfigContext = { uuid: data.uuid, tenant: tenantMatch?.[1] || null, sector: sectorMatch?.[1] || null };
             console.log('[Content Script] Configuration detected:', currentConfigContext);
             updateFieldValuesTabVisibility();
+          } else {
+            console.log('[Content Script] No UUID in response');
           }
-        } catch (e) {}
+        } catch (e) {
+          console.error('[Content Script] Error parsing response:', e);
+        }
         return response;
       });
     }
@@ -62,18 +68,30 @@ let currentConfigContext = null;
 })();
 
 function updateFieldValuesTabVisibility() {
+  console.log('[Content Script] updateFieldValuesTabVisibility called');
   const fieldValuesTab = document.querySelector('[data-tab="field-values"]');
   const fieldValuesContent = document.getElementById('field-values-tab');
   const uuidInput = document.getElementById('logik-vc-runtime-uuid');
 
-  if (!fieldValuesTab || !fieldValuesContent) return;
+  console.log('[Content Script] fieldValuesTab exists:', !!fieldValuesTab);
+  console.log('[Content Script] fieldValuesContent exists:', !!fieldValuesContent);
+  console.log('[Content Script] uuidInput exists:', !!uuidInput);
+  console.log('[Content Script] currentConfigContext:', currentConfigContext);
+
+  if (!fieldValuesTab || !fieldValuesContent) {
+    console.log('[Content Script] Panel elements not found, skipping');
+    return;
+  }
 
   if (currentConfigContext) {
+    console.log('[Content Script] Showing Field Values tab, UUID:', currentConfigContext.uuid);
     fieldValuesTab.style.display = 'block';
     if (uuidInput) {
       uuidInput.value = currentConfigContext.uuid;
+      console.log('[Content Script] UUID input updated');
     }
   } else {
+    console.log('[Content Script] No config context, hiding Field Values tab');
     fieldValuesTab.style.display = 'none';
   }
 }
