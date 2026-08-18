@@ -12,7 +12,7 @@ document.addEventListener('logik-vc-uuid-detected', (e) => {
     currentConfigContext = e.detail;
     console.log('[Content Script] UUID received from main world:', currentConfigContext);
     if (isTopFrame) {
-      updateFieldValuesTabVisibility();
+      updateRuntimeTabsVisibility();
     } else {
       // Panel UI lives in the top frame (e.g. testFrame.html) — relay across the boundary
       console.log('[Content Script] Relaying UUID to top frame via postMessage');
@@ -28,22 +28,19 @@ if (isTopFrame) {
       if (!currentConfigContext || currentConfigContext.uuid !== event.data.detail.uuid) {
         currentConfigContext = event.data.detail;
         console.log('[Content Script] UUID received via postMessage relay:', currentConfigContext);
-        updateFieldValuesTabVisibility();
+        updateRuntimeTabsVisibility();
       }
     }
   });
 }
 
-function updateFieldValuesTabVisibility() {
-  console.log('[Content Script] updateFieldValuesTabVisibility called');
+function updateRuntimeTabsVisibility() {
+  console.log('[Content Script] updateRuntimeTabsVisibility called');
   const fieldValuesTab = document.querySelector('[data-tab="field-values"]');
   const fieldValuesContent = document.getElementById('field-values-tab');
   const uuidInput = document.getElementById('logik-vc-runtime-uuid');
-
-  console.log('[Content Script] fieldValuesTab exists:', !!fieldValuesTab);
-  console.log('[Content Script] fieldValuesContent exists:', !!fieldValuesContent);
-  console.log('[Content Script] uuidInput exists:', !!uuidInput);
-  console.log('[Content Script] currentConfigContext:', currentConfigContext);
+  const debuggerTab = document.querySelector('[data-tab="debugger"]');
+  const debuggerContent = document.getElementById('debugger-tab');
 
   if (!fieldValuesTab || !fieldValuesContent) {
     console.log('[Content Script] Panel elements not found, skipping');
@@ -51,7 +48,7 @@ function updateFieldValuesTabVisibility() {
   }
 
   if (currentConfigContext) {
-    console.log('[Content Script] Showing Field Values tab, UUID:', currentConfigContext.uuid);
+    console.log('[Content Script] Showing runtime tabs, UUID:', currentConfigContext.uuid);
     const wasHidden = fieldValuesTab.style.display === 'none';
 
     fieldValuesTab.style.display = '';
@@ -60,12 +57,14 @@ function updateFieldValuesTabVisibility() {
     // an inline style otherwise always wins over the class-based rule.
     fieldValuesContent.style.display = '';
 
+    if (debuggerTab) debuggerTab.style.display = '';
+    if (debuggerContent) debuggerContent.style.display = '';
+
     if (uuidInput) {
       uuidInput.value = currentConfigContext.uuid;
-      console.log('[Content Script] UUID input updated');
     }
 
-    // Auto-select the Field Values tab the first time it becomes available
+    // Auto-select the Field Values tab the first time these tabs become available
     if (wasHidden) {
       const panel = document.getElementById('logik-blueprint-vc-panel');
       if (panel) {
@@ -76,8 +75,9 @@ function updateFieldValuesTabVisibility() {
       }
     }
   } else {
-    console.log('[Content Script] No config context, hiding Field Values tab');
+    console.log('[Content Script] No config context, hiding runtime tabs');
     fieldValuesTab.style.display = 'none';
+    if (debuggerTab) debuggerTab.style.display = 'none';
   }
 }
 
@@ -383,8 +383,8 @@ function injectSidePanel() {
 
     console.log('[Content Script] Panel HTML injected');
 
-    // Update Field Values tab visibility based on current config context
-    updateFieldValuesTabVisibility();
+    // Update Field Values / Debugger tab visibility based on current config context
+    updateRuntimeTabsVisibility();
 
     // Make sure panel starts closed (remove any 'open' class)
     panel = document.getElementById('logik-blueprint-vc-panel');
@@ -451,6 +451,7 @@ function getPanelHTML() {
         <!-- Tab Navigation -->
         <div class="logik-vc-tabs" id="logik-vc-main-tabs">
           <button class="logik-vc-tab-btn" data-tab="field-values">Field Values</button>
+          <button class="logik-vc-tab-btn" data-tab="debugger" style="display: none;">Debugger</button>
           <button class="logik-vc-tab-btn ${isTransactionPage ? '' : 'logik-vc-tab-active'}" data-tab="version-control" ${isTransactionPage ? 'style="display: none;"' : ''}>Version Control</button>
           <button class="logik-vc-tab-btn ${isTransactionPage ? 'logik-vc-tab-active' : ''}" data-tab="rules">Rules</button>
           <button class="logik-vc-tab-btn" data-tab="tables" id="logik-vc-tables-tab-btn" style="display: none;">Tables</button>
@@ -466,6 +467,23 @@ function getPanelHTML() {
               <input type="text" id="logik-vc-runtime-field" class="logik-vc-input" placeholder="Enter field variable name..." style="margin-bottom: 12px;">
               <button id="logik-vc-runtime-search" class="logik-vc-button" style="width: 100%; margin-bottom: 12px;">Search Field</button>
               <div id="logik-vc-runtime-result" style="margin-top: 12px;"></div>
+            </div>
+          </div>
+
+          <!-- Debugger Tab -->
+          <div id="debugger-tab" class="logik-vc-tab-content" style="display: none;">
+            <div class="logik-vc-section">
+              <label for="logik-vc-debugger-rule-input" style="display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: #333;">Rule Name:</label>
+              <div style="position: relative;">
+                <input type="text" id="logik-vc-debugger-rule-input" class="logik-vc-input" placeholder="Start typing a rule name..." autocomplete="off" style="margin-bottom: 4px;">
+                <div id="logik-vc-debugger-rule-suggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 20; background: white; border: 1px solid rgba(0,0,0,0.15); border-radius: 4px; max-height: 220px; overflow-y: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"></div>
+              </div>
+              <p class="logik-vc-help-text" style="font-size: 11px; color: #666; margin: 8px 0 12px 0;">Pick a rule to generate copy-ready Debugger Inputs (<code>{"cfg": {...}}</code>) using this session's actual live field values. One block is generated per script (condition/actions) on the rule.</p>
+              <div id="logik-vc-debugger-status" class="logik-vc-status"></div>
+              <div id="logik-vc-debugger-error" class="logik-vc-error"></div>
+            </div>
+            <div class="logik-vc-section">
+              <div id="logik-vc-debugger-results"></div>
             </div>
           </div>
 
@@ -1708,6 +1726,9 @@ function setupPanelListeners() {
   if (runtimeSearchBtn) {
     runtimeSearchBtn.addEventListener('click', searchRuntimeField);
   }
+
+  // Debugger tab (rule autocomplete + generated debugger inputs)
+  setupDebuggerTab(panel);
 
   // Handle Tables tab visibility based on URL
   handleTablesTabVisibility();
@@ -2976,6 +2997,164 @@ function showRestoreSuccess(filename, jobResult) {
   });
 }
 
+// Fetches the full live configuration for a runtime session (used by both Field Values
+// search and the Debugger tab's field-value lookups).
+async function fetchLiveRuntimeConfig(uuid) {
+  const runtimeKey = await getRuntimeApiKeyForCurrentEnv();
+  const hostname = new URL(window.location.href).hostname;
+  const parts = hostname.split('.');
+  const tenant = parts[0];
+  const sector = parts[1];
+  const origin = `https://${hostname}/`;
+
+  const response = await fetch(
+    `https://${tenant}.${sector}.logik.io/api/${uuid}`,
+    {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${runtimeKey}`,
+        'Accept': 'application/vnd.logik.cfg-v2+json',
+        'Origin': origin
+      }
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+// Resolves which admin blueprint a live runtime session belongs to. The config doesn't
+// reliably expose its admin URL slug, so we look up sys.productCode against the
+// configurableProducts list and take that product's blueprintVariableName instead.
+async function getBlueprintVariableNameFromConfig(config) {
+  const productCodeField = (config.fields || []).find(f => f.variableName === 'sys.productCode');
+  const productCode = productCodeField ? productCodeField.value : null;
+
+  if (!productCode) {
+    throw new Error('Could not determine product code (sys.productCode) from the live configuration');
+  }
+
+  const apiKey = await getLogikApiKeyForCurrentEnv();
+  const hostname = new URL(window.location.href).hostname;
+  const parts = hostname.split('.');
+  const tenant = parts[0];
+  const sector = parts[1];
+
+  const response = await fetch(
+    `https://${tenant}.${sector}.logik.io/api/admin/v1/configurableProducts?page=0&sort=modified%2CDESC&size=1000`,
+    {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Accept': 'application/json'
+      }
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to load configurable products: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const match = (data.content || []).find(p => p.productCode === productCode);
+
+  if (!match || !match.blueprintVariableName) {
+    throw new Error(`No blueprint found for product code "${productCode}"`);
+  }
+
+  return match.blueprintVariableName;
+}
+
+// Same as loadBlueprintRules(), but takes the blueprint identifier directly instead of
+// extracting it from the admin page URL — needed because runtime session pages don't have
+// a /blueprint/{name}/ URL to read it from.
+async function loadRulesForBlueprint(blueprintVariableName) {
+  const apiKey = await getLogikApiKeyForCurrentEnv();
+  const hostname = new URL(window.location.href).hostname;
+  const parts = hostname.split('.');
+  const tenant = parts[0];
+  const sector = parts[1];
+
+  let allRules = [];
+  let page = 0;
+  const pageSize = 5000;
+  let hasMorePages = true;
+
+  while (hasMorePages) {
+    const rulesUrl = `https://${tenant}.${sector}.logik.io/api/admin/v2/blueprints/${blueprintVariableName}/rules?page=${page}&size=${pageSize}&sort=modified%2CDESC`;
+    const rulesResponse = await fetch(rulesUrl, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!rulesResponse.ok) {
+      throw new Error(`Failed to load rules: ${rulesResponse.status}`);
+    }
+
+    const rulesData = await rulesResponse.json();
+    const pageRules = rulesData.content || [];
+    allRules = allRules.concat(pageRules);
+
+    hasMorePages = pageRules.length === pageSize;
+    page++;
+  }
+
+  return allRules.filter(rule => rule.status === 'active');
+}
+
+// Caches the resolved rule list for the Debugger tab, scoped to the current runtime
+// session's UUID (the UUID never changes for the life of a session).
+let debuggerRulesCache = null;
+
+async function ensureDebuggerRulesLoaded() {
+  if (!currentConfigContext) {
+    throw new Error('No configuration detected yet');
+  }
+
+  if (debuggerRulesCache && debuggerRulesCache.uuid === currentConfigContext.uuid) {
+    return debuggerRulesCache.rules;
+  }
+
+  const config = await fetchLiveRuntimeConfig(currentConfigContext.uuid);
+  const blueprintVariableName = await getBlueprintVariableNameFromConfig(config);
+  const rules = await loadRulesForBlueprint(blueprintVariableName);
+
+  debuggerRulesCache = { uuid: currentConfigContext.uuid, blueprintVariableName, rules };
+  return rules;
+}
+
+// Extracts cfg.x references from script source. Standard fields (cfg.x) are returned
+// separately from deeper references (cfg.x.y, e.g. sets/product pickers), which aren't
+// supported yet and are surfaced to the user instead of silently mishandled.
+function extractCfgReferences(scriptContent) {
+  const standard = new Set();
+  const skippedNested = new Set();
+  const regex = /cfg\.([A-Za-z_][A-Za-z0-9_]*)((?:\.[A-Za-z_][A-Za-z0-9_]*)+)?/g;
+  let match;
+
+  while ((match = regex.exec(scriptContent)) !== null) {
+    const fieldName = match[1];
+    const nestedSuffix = match[2];
+    if (nestedSuffix) {
+      skippedNested.add(fieldName + nestedSuffix);
+    } else {
+      standard.add(fieldName);
+    }
+  }
+
+  return { standard: Array.from(standard), skippedNested: Array.from(skippedNested) };
+}
+
+function escapeHtmlForPanel(text) {
+  const div = document.createElement('div');
+  div.textContent = String(text);
+  return div.innerHTML;
+}
+
 async function searchRuntimeField() {
   const panel = document.getElementById('logik-blueprint-vc-panel');
   const uuid = panel.querySelector('#logik-vc-runtime-uuid').value.trim();
@@ -2990,30 +3169,7 @@ async function searchRuntimeField() {
   resultDiv.innerHTML = '<div style="padding: 12px; color: #999; font-size: 12px;">Searching...</div>';
 
   try {
-    const runtimeKey = await getRuntimeApiKeyForCurrentEnv();
-    const hostname = new URL(window.location.href).hostname;
-    const parts = hostname.split('.');
-    const tenant = parts[0];
-    const sector = parts[1];
-    const origin = `https://${hostname}/`;
-
-    const response = await fetch(
-      `https://${tenant}.${sector}.logik.io/api/${uuid}`,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${runtimeKey}`,
-          'Accept': 'application/vnd.logik.cfg-v2+json',
-          'Origin': origin
-        }
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const config = await response.json();
+    const config = await fetchLiveRuntimeConfig(uuid);
     const field = config.fields.find(f => f.variableName === fieldName);
 
     if (field) {
@@ -3032,6 +3188,236 @@ async function searchRuntimeField() {
   } catch (error) {
     resultDiv.innerHTML = `<div style="color: #d32f2f; padding: 12px; background: rgba(211, 47, 47, 0.1); border-radius: 4px; font-size: 12px;">⚠️ Error: ${error.message}</div>`;
   }
+}
+
+// Copy payloads for the Debugger tab's generated JSON blocks, keyed by index. Kept out of
+// the DOM (rather than a data- attribute) since the JSON always contains quote characters
+// that would otherwise need HTML-attribute escaping.
+let debuggerCopyPayloads = {};
+
+async function generateDebuggerInputsForRule(rule, panel) {
+  const statusEl = panel.querySelector('#logik-vc-debugger-status');
+  const errorEl = panel.querySelector('#logik-vc-debugger-error');
+  const resultsEl = panel.querySelector('#logik-vc-debugger-results');
+
+  statusEl.textContent = 'Building debugger inputs...';
+  errorEl.textContent = '';
+  resultsEl.innerHTML = '';
+  debuggerCopyPayloads = {};
+
+  try {
+    const apiKey = await getLogikApiKeyForCurrentEnv();
+    const hostname = new URL(window.location.href).hostname;
+    const parts = hostname.split('.');
+    const tenant = parts[0];
+    const sector = parts[1];
+
+    const ruleResponse = await fetch(
+      `https://${tenant}.${sector}.logik.io/api/admin/v3/rules/${rule.variableName}`,
+      { headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' } }
+    );
+
+    if (!ruleResponse.ok) {
+      throw new Error(`Failed to load rule details: ${ruleResponse.status}`);
+    }
+
+    const ruleDetails = await ruleResponse.json();
+
+    // Build a labeled entry per script so results map back to what's visible in Logik's UI
+    const scriptDescriptors = [];
+    if (ruleDetails.condition && ruleDetails.condition.scriptId) {
+      scriptDescriptors.push({ label: 'Condition', scriptId: ruleDetails.condition.scriptId });
+    }
+    if (Array.isArray(ruleDetails.actions)) {
+      ruleDetails.actions.forEach((action, idx) => {
+        if (action.scriptId) {
+          const label = action.fieldVariableName ? `Action: ${action.fieldVariableName}` : `Action ${idx + 1}`;
+          scriptDescriptors.push({ label, scriptId: action.scriptId });
+        }
+      });
+    }
+
+    if (scriptDescriptors.length === 0) {
+      statusEl.textContent = '';
+      resultsEl.innerHTML = '<div style="padding: 12px; color: #999; font-size: 12px;">This rule has no scripts.</div>';
+      return;
+    }
+
+    if (!window.logikScriptCache) window.logikScriptCache = {};
+
+    const config = await fetchLiveRuntimeConfig(currentConfigContext.uuid);
+    const fieldMap = new Map((config.fields || []).map(f => [f.variableName, f.value]));
+
+    const sections = [];
+
+    for (const descriptor of scriptDescriptors) {
+      let scriptContent = window.logikScriptCache[descriptor.scriptId];
+
+      if (scriptContent === undefined) {
+        const scriptResponse = await fetch(
+          `https://${tenant}.${sector}.logik.io/api/admin/v1/scripts/${descriptor.scriptId}`,
+          { headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' } }
+        );
+
+        if (!scriptResponse.ok) {
+          console.warn('[Content Script] Failed to fetch script:', descriptor.scriptId);
+          continue;
+        }
+
+        const scriptData = await scriptResponse.json();
+        scriptContent = scriptData.content || '';
+        window.logikScriptCache[descriptor.scriptId] = scriptContent;
+      }
+
+      const { standard, skippedNested } = extractCfgReferences(scriptContent);
+
+      const cfgObject = {};
+      const missingFields = [];
+
+      standard.forEach(fieldName => {
+        if (fieldMap.has(fieldName)) {
+          cfgObject[fieldName] = fieldMap.get(fieldName);
+        } else {
+          missingFields.push(fieldName);
+        }
+      });
+
+      sections.push({
+        label: descriptor.label,
+        json: JSON.stringify({ cfg: cfgObject }, null, 2),
+        fieldCount: standard.length,
+        skippedNested,
+        missingFields
+      });
+    }
+
+    statusEl.textContent = '';
+
+    if (sections.length === 0) {
+      resultsEl.innerHTML = '<div style="padding: 12px; color: #999; font-size: 12px;">Could not load any scripts for this rule.</div>';
+      return;
+    }
+
+    resultsEl.innerHTML = sections.map((section, idx) => {
+      debuggerCopyPayloads[idx] = section.json;
+
+      const warnings = [];
+      if (section.skippedNested.length > 0) {
+        warnings.push(`<div style="margin-top: 6px; font-size: 11px; color: #e67e22;">⚠️ Skipped ${section.skippedNested.length} advanced field reference(s) (sets/product pickers not yet supported): ${escapeHtmlForPanel(section.skippedNested.join(', '))}</div>`);
+      }
+      if (section.missingFields.length > 0) {
+        warnings.push(`<div style="margin-top: 6px; font-size: 11px; color: #d32f2f;">⚠️ Not found in live config: ${escapeHtmlForPanel(section.missingFields.join(', '))}</div>`);
+      }
+
+      return `
+        <details class="logik-vc-debugger-section" ${idx === 0 ? 'open' : ''} style="margin-bottom: 10px; border: 1px solid rgba(0,0,0,0.1); border-radius: 4px;">
+          <summary style="padding: 8px 10px; cursor: pointer; font-size: 12px; font-weight: 600; background: rgba(0,0,0,0.03);">
+            ${escapeHtmlForPanel(section.label)} ${section.fieldCount === 0 ? '<span style="color: #999; font-weight: 400;">(no standard fields referenced)</span>' : ''}
+          </summary>
+          <div style="padding: 10px;">
+            <pre style="background: #1e1e1e; color: #d4d4d4; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin: 0 0 8px 0;">${escapeHtmlForPanel(section.json)}</pre>
+            <button class="logik-vc-debugger-copy-btn" data-copy-idx="${idx}" style="font-size: 11px; padding: 4px 10px;">📋 Copy</button>
+            ${warnings.join('')}
+          </div>
+        </details>
+      `;
+    }).join('');
+  } catch (error) {
+    statusEl.textContent = '';
+    errorEl.textContent = `⚠️ ${error.message}`;
+  }
+}
+
+function setupDebuggerTab(panel) {
+  const input = panel.querySelector('#logik-vc-debugger-rule-input');
+  const suggestionsEl = panel.querySelector('#logik-vc-debugger-rule-suggestions');
+  const statusEl = panel.querySelector('#logik-vc-debugger-status');
+  const errorEl = panel.querySelector('#logik-vc-debugger-error');
+  const resultsEl = panel.querySelector('#logik-vc-debugger-results');
+
+  if (!input || !suggestionsEl || !resultsEl) return;
+
+  let debounceTimer = null;
+
+  input.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    const query = input.value.trim().toLowerCase();
+    errorEl.textContent = '';
+
+    if (!query) {
+      suggestionsEl.style.display = 'none';
+      suggestionsEl.innerHTML = '';
+      return;
+    }
+
+    debounceTimer = setTimeout(async () => {
+      try {
+        statusEl.textContent = 'Loading rules...';
+        const rules = await ensureDebuggerRulesLoaded();
+        statusEl.textContent = '';
+
+        const matches = rules
+          .filter(r => (r.name || '').toLowerCase().includes(query))
+          .slice(0, 20);
+
+        if (matches.length === 0) {
+          suggestionsEl.innerHTML = '<div style="padding: 8px; color: #999; font-size: 12px;">No matching rules</div>';
+          suggestionsEl.style.display = 'block';
+          return;
+        }
+
+        suggestionsEl.innerHTML = matches.map(r =>
+          `<div class="logik-vc-debugger-suggestion" data-variable-name="${escapeHtmlForPanel(r.variableName)}" style="padding: 8px; cursor: pointer; font-size: 12px; border-bottom: 1px solid rgba(0,0,0,0.05);">${escapeHtmlForPanel(r.name)}</div>`
+        ).join('');
+        suggestionsEl.style.display = 'block';
+      } catch (error) {
+        statusEl.textContent = '';
+        errorEl.textContent = `⚠️ ${error.message}`;
+      }
+    }, 300);
+  });
+
+  suggestionsEl.addEventListener('click', async (e) => {
+    const item = e.target.closest('.logik-vc-debugger-suggestion');
+    if (!item) return;
+
+    const variableName = item.dataset.variableName;
+    suggestionsEl.style.display = 'none';
+    suggestionsEl.innerHTML = '';
+
+    try {
+      const rules = await ensureDebuggerRulesLoaded();
+      const rule = rules.find(r => r.variableName === variableName);
+      if (!rule) return;
+
+      input.value = rule.name;
+      await generateDebuggerInputsForRule(rule, panel);
+    } catch (error) {
+      errorEl.textContent = `⚠️ ${error.message}`;
+    }
+  });
+
+  resultsEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('.logik-vc-debugger-copy-btn');
+    if (!btn) return;
+
+    const text = debuggerCopyPayloads[btn.dataset.copyIdx];
+    if (!text) return;
+
+    navigator.clipboard.writeText(text).then(() => {
+      const original = btn.textContent;
+      btn.textContent = '✓ Copied';
+      setTimeout(() => {
+        btn.textContent = original;
+      }, 1500);
+    });
+  });
+
+  document.addEventListener('click', (e) => {
+    if (e.target !== input && !suggestionsEl.contains(e.target)) {
+      suggestionsEl.style.display = 'none';
+    }
+  });
 }
 
 function showDeleteConfirmation(filename) {
