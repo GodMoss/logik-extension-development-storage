@@ -111,6 +111,7 @@ function resetProfileForm() {
   document.getElementById('profileName').value = '';
   document.getElementById('profileEnv').value = '';
   document.getElementById('profileApiKey').value = '';
+  document.getElementById('profileRuntimeApiKey').value = '';
   document.getElementById('profileFormStatus').classList.remove('success', 'error');
   document.getElementById('profileFormStatus').textContent = '';
   editingProfileIndex = null;
@@ -124,6 +125,7 @@ async function editProfile(index) {
   document.getElementById('profileName').value = profile.name;
   document.getElementById('profileEnv').value = profile.environment;
   document.getElementById('profileApiKey').value = profile.apiKey;
+  document.getElementById('profileRuntimeApiKey').value = profile.runtimeApiKey || '';
   editingProfileIndex = index;
 
   document.getElementById('profileForm').classList.add('open');
@@ -147,6 +149,7 @@ async function saveProfile() {
   const name = document.getElementById('profileName').value.trim();
   const environment = document.getElementById('profileEnv').value.trim();
   const apiKey = document.getElementById('profileApiKey').value.trim();
+  const runtimeApiKey = document.getElementById('profileRuntimeApiKey').value.trim();
 
   // Validation
   if (!name) {
@@ -168,10 +171,10 @@ async function saveProfile() {
   let profiles = data.profiles || [];
 
   if (editingProfileIndex !== null) {
-    profiles[editingProfileIndex] = { name, environment, apiKey };
+    profiles[editingProfileIndex] = { name, environment, apiKey, runtimeApiKey };
     console.log('[Options] Profile updated');
   } else {
-    profiles.push({ name, environment, apiKey });
+    profiles.push({ name, environment, apiKey, runtimeApiKey });
     console.log('[Options] Profile added');
   }
 

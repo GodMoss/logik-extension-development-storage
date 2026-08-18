@@ -224,6 +224,27 @@ async function getLogikApiKeyForCurrentEnv() {
   return matchingProfile.apiKey;
 }
 
+async function getRuntimeApiKeyForCurrentEnv() {
+  const data = await chrome.storage.local.get('profiles');
+  const profiles = data.profiles || [];
+  const currentEnv = extractEnvironmentFromHostname();
+
+  if (!currentEnv) {
+    throw new Error('Could not determine environment from hostname');
+  }
+
+  const matchingProfile = profiles.find(p => p.environment === currentEnv);
+  if (!matchingProfile) {
+    throw new Error(`No profile configured for environment: ${currentEnv}`);
+  }
+
+  if (!matchingProfile.runtimeApiKey) {
+    throw new Error(`No Runtime API Key saved for profile "${matchingProfile.name}". Add one in the extension's Settings page.`);
+  }
+
+  return matchingProfile.runtimeApiKey;
+}
+
 function isOnBlueprintListPage() {
   // Check if URL ends with /blueprints (but not /blueprint/{name})
   const path = window.location.pathname;
@@ -441,8 +462,6 @@ function getPanelHTML() {
             <div class="logik-vc-section">
               <label for="logik-vc-runtime-uuid" style="display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: #333;">Configuration UUID (auto-detected):</label>
               <input type="text" id="logik-vc-runtime-uuid" class="logik-vc-input" placeholder="Configuration UUID will appear here..." style="margin-bottom: 12px;" readonly>
-              <label for="logik-vc-runtime-key" style="display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: #333;">Runtime API Key:</label>
-              <input type="password" id="logik-vc-runtime-key" class="logik-vc-input" placeholder="Paste runtime API key..." style="margin-bottom: 12px;">
               <label for="logik-vc-runtime-field" style="display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: #333;">Field Name:</label>
               <input type="text" id="logik-vc-runtime-field" class="logik-vc-input" placeholder="Enter field variable name..." style="margin-bottom: 12px;">
               <button id="logik-vc-runtime-search" class="logik-vc-button" style="width: 100%; margin-bottom: 12px;">Search Field</button>
@@ -2960,18 +2979,18 @@ function showRestoreSuccess(filename, jobResult) {
 async function searchRuntimeField() {
   const panel = document.getElementById('logik-blueprint-vc-panel');
   const uuid = panel.querySelector('#logik-vc-runtime-uuid').value.trim();
-  const runtimeKey = panel.querySelector('#logik-vc-runtime-key').value.trim();
   const fieldName = panel.querySelector('#logik-vc-runtime-field').value.trim();
   const resultDiv = panel.querySelector('#logik-vc-runtime-result');
 
-  if (!uuid || !runtimeKey || !fieldName) {
-    resultDiv.innerHTML = '<div style="color: #d32f2f; padding: 12px; background: rgba(211, 47, 47, 0.1); border-radius: 4px; font-size: 12px;">⚠️ Please fill in all fields.</div>';
+  if (!uuid || !fieldName) {
+    resultDiv.innerHTML = '<div style="color: #d32f2f; padding: 12px; background: rgba(211, 47, 47, 0.1); border-radius: 4px; font-size: 12px;">⚠️ Please fill in the field name.</div>';
     return;
   }
 
   resultDiv.innerHTML = '<div style="padding: 12px; color: #999; font-size: 12px;">Searching...</div>';
 
   try {
+    const runtimeKey = await getRuntimeApiKeyForCurrentEnv();
     const hostname = new URL(window.location.href).hostname;
     const parts = hostname.split('.');
     const tenant = parts[0];

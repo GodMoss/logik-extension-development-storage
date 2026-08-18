@@ -360,6 +360,11 @@
           <label for="profileApiKey">Admin API Key:</label>
           <input type="password" id="profileApiKey" placeholder="Paste your Admin API Key here">
         </div>
+        <div class="form-row">
+          <label for="profileRuntimeApiKey">Runtime API Key (optional):</label>
+          <input type="password" id="profileRuntimeApiKey" placeholder="Paste your Runtime API Key here">
+          <p class="help-text" style="margin-bottom: 0; margin-top: 4px;">Used by the Field Values debugger to look up live field values during a configuration session. Stays the same across sessions, so it only needs to be saved once per environment.</p>
+        </div>
         <div class="form-buttons">
           <button id="saveProfileBtn">Save Profile</button>
           <button class="btn-cancel" id="cancelProfileBtn">Cancel</button>
