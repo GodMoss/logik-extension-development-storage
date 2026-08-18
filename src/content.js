@@ -41,6 +41,8 @@ function updateRuntimeTabsVisibility() {
   const uuidInput = document.getElementById('logik-vc-runtime-uuid');
   const debuggerTab = document.querySelector('[data-tab="debugger"]');
   const debuggerContent = document.getElementById('debugger-tab');
+  const bomTab = document.querySelector('[data-tab="bom"]');
+  const bomContent = document.getElementById('bom-tab');
 
   if (!fieldValuesTab || !fieldValuesContent) {
     console.log('[Content Script] Panel elements not found, skipping');
@@ -59,6 +61,8 @@ function updateRuntimeTabsVisibility() {
 
     if (debuggerTab) debuggerTab.style.display = '';
     if (debuggerContent) debuggerContent.style.display = '';
+    if (bomTab) bomTab.style.display = '';
+    if (bomContent) bomContent.style.display = '';
 
     if (uuidInput) {
       uuidInput.value = currentConfigContext.uuid;
@@ -78,6 +82,7 @@ function updateRuntimeTabsVisibility() {
     console.log('[Content Script] No config context, hiding runtime tabs');
     fieldValuesTab.style.display = 'none';
     if (debuggerTab) debuggerTab.style.display = 'none';
+    if (bomTab) bomTab.style.display = 'none';
   }
 }
 
@@ -452,6 +457,7 @@ function getPanelHTML() {
         <div class="logik-vc-tabs" id="logik-vc-main-tabs">
           <button class="logik-vc-tab-btn" data-tab="field-values">Field Values</button>
           <button class="logik-vc-tab-btn" data-tab="debugger" style="display: none;">Debugger</button>
+          <button class="logik-vc-tab-btn" data-tab="bom" style="display: none;">BOM</button>
           <button class="logik-vc-tab-btn ${isTransactionPage ? '' : 'logik-vc-tab-active'}" data-tab="version-control" ${isTransactionPage ? 'style="display: none;"' : ''}>Version Control</button>
           <button class="logik-vc-tab-btn ${isTransactionPage ? 'logik-vc-tab-active' : ''}" data-tab="rules">Rules</button>
           <button class="logik-vc-tab-btn" data-tab="tables" id="logik-vc-tables-tab-btn" style="display: none;">Tables</button>
@@ -484,6 +490,18 @@ function getPanelHTML() {
             </div>
             <div class="logik-vc-section">
               <div id="logik-vc-debugger-results"></div>
+            </div>
+          </div>
+
+          <!-- BOM Tab -->
+          <div id="bom-tab" class="logik-vc-tab-content" style="display: none;">
+            <div class="logik-vc-section">
+              <button id="logik-vc-bom-refresh" class="logik-vc-button" style="width: 100%; margin-bottom: 12px;">🔄 Refresh BOM</button>
+              <div id="logik-vc-bom-status" class="logik-vc-status"></div>
+              <div id="logik-vc-bom-error" class="logik-vc-error"></div>
+            </div>
+            <div class="logik-vc-section">
+              <div id="logik-vc-bom-results"></div>
             </div>
           </div>
 
@@ -1729,6 +1747,9 @@ function setupPanelListeners() {
 
   // Debugger tab (rule autocomplete + generated debugger inputs)
   setupDebuggerTab(panel);
+
+  // BOM tab (manual refresh + level-colored hierarchy view)
+  setupBomTab(panel);
 
   // Handle Tables tab visibility based on URL
   handleTablesTabVisibility();
@@ -3153,6 +3174,109 @@ function escapeHtmlForPanel(text) {
   const div = document.createElement('div');
   div.textContent = String(text);
   return div.innerHTML;
+}
+
+// Fetches the full BOM for a runtime session, paginating until the API reports the last page.
+async function fetchBom(uuid) {
+  const runtimeKey = await getRuntimeApiKeyForCurrentEnv();
+  const hostname = new URL(window.location.href).hostname;
+  const parts = hostname.split('.');
+  const tenant = parts[0];
+  const sector = parts[1];
+  const origin = `https://${hostname}/`;
+
+  let allProducts = [];
+  let page = 0;
+  const limit = 500;
+
+  while (true) {
+    const response = await fetch(
+      `https://${tenant}.${sector}.logik.io/api/${uuid}/bom?page=${page}&limit=${limit}&sort=modified%2CDESC`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${runtimeKey}`,
+          'Accept': 'application/json',
+          'Origin': origin
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const pageProducts = data.products || [];
+    allProducts = allProducts.concat(pageProducts);
+
+    if (data.last !== false || pageProducts.length === 0 || page > 100) {
+      break;
+    }
+    page++;
+  }
+
+  return allProducts;
+}
+
+// Background color / accent per BOM nesting level, cycling if a BOM nests deeper than this.
+const BOM_LEVEL_COLORS = [
+  { bg: 'rgba(3, 105, 161, 0.10)', border: '#0369a1' },
+  { bg: 'rgba(16, 185, 129, 0.10)', border: '#10b981' },
+  { bg: 'rgba(245, 158, 11, 0.12)', border: '#f59e0b' },
+  { bg: 'rgba(139, 92, 246, 0.10)', border: '#8b5cf6' },
+  { bg: 'rgba(236, 72, 153, 0.10)', border: '#ec4899' },
+  { bg: 'rgba(107, 114, 128, 0.12)', border: '#6b7280' }
+];
+
+function renderBomResults(products, container) {
+  if (!products || products.length === 0) {
+    container.innerHTML = '<div style="padding: 12px; color: #999; font-size: 12px;">No BOM products found.</div>';
+    return;
+  }
+
+  container.innerHTML = products.map(product => {
+    const level = typeof product.level === 'number' ? product.level : 0;
+    const color = BOM_LEVEL_COLORS[level % BOM_LEVEL_COLORS.length];
+    const code = product.productCode || product.id || '';
+
+    return `
+      <div style="margin-left: ${level * 18}px; margin-bottom: 4px; padding: 6px 10px; background: ${color.bg}; border-left: 3px solid ${color.border}; border-radius: 3px;">
+        <div style="font-size: 12px; font-weight: 600; color: #333;">${escapeHtmlForPanel(product.name || '')}</div>
+        <div style="font-size: 11px; color: #555; font-family: monospace; margin-top: 1px;">${escapeHtmlForPanel(code)}</div>
+        ${product.description ? `<div style="font-size: 11px; color: #777; margin-top: 1px;">${escapeHtmlForPanel(product.description)}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function setupBomTab(panel) {
+  const refreshBtn = panel.querySelector('#logik-vc-bom-refresh');
+  const statusEl = panel.querySelector('#logik-vc-bom-status');
+  const errorEl = panel.querySelector('#logik-vc-bom-error');
+  const resultsEl = panel.querySelector('#logik-vc-bom-results');
+
+  if (!refreshBtn || !resultsEl) return;
+
+  refreshBtn.addEventListener('click', async () => {
+    if (!currentConfigContext) {
+      errorEl.textContent = '⚠️ No configuration detected yet';
+      return;
+    }
+
+    statusEl.textContent = 'Loading BOM...';
+    errorEl.textContent = '';
+    resultsEl.innerHTML = '';
+
+    try {
+      const products = await fetchBom(currentConfigContext.uuid);
+      statusEl.textContent = '';
+      renderBomResults(products, resultsEl);
+    } catch (error) {
+      statusEl.textContent = '';
+      errorEl.textContent = `⚠️ ${error.message}`;
+    }
+  });
 }
 
 async function searchRuntimeField() {
